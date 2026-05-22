@@ -21,14 +21,32 @@ export default function ApplyFranchiseScreen() {
   })
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const updateField = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }))
 
   const handleSubmit = () => {
-    if (!acceptedTerms) return
+    setErrorMessage(null)
+    setSuccessMessage(null)
+
+    const requiredFields = ['fullName', 'companyName', 'email', 'phone', 'city', 'state', 'investmentCapacity', 'preferredLocation'] as const
+    const hasMissing = requiredFields.some((field) => !form[field].trim())
+
+    if (hasMissing) {
+      setErrorMessage('Please fill all required fields before submitting.')
+      return
+    }
+
+    if (!acceptedTerms) {
+      setErrorMessage('Please accept the franchise terms to continue.')
+      return
+    }
+
     setSubmitting(true)
     setTimeout(() => {
       setSubmitting(false)
+      setSuccessMessage('Application submitted successfully. Redirecting to verification...')
       router.push('/dealership/verification')
     }, 650)
   }
@@ -47,6 +65,20 @@ export default function ApplyFranchiseScreen() {
           <Text style={styles.heroLabel}>Franchise application</Text>
           <Text style={styles.heroText}>Complete the form below with your business details and preferred location.</Text>
         </View>
+
+        {errorMessage ? (
+          <View style={styles.errorCard}>
+            <MaterialCommunityIcons name="alert-circle" size={16} color="#B91C1C" />
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        ) : null}
+
+        {successMessage ? (
+          <View style={styles.successCard}>
+            <MaterialCommunityIcons name="check-decagram" size={16} color="#15803D" />
+            <Text style={styles.successText}>{successMessage}</Text>
+          </View>
+        ) : null}
 
         <View style={styles.card}>
           {([
@@ -134,6 +166,32 @@ const styles = StyleSheet.create({
   title: { color: '#064E3B', fontSize: 24, fontWeight: '900' },
   iconButton: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#064E3B', shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 },
   heroCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16, marginBottom: 12, shadowColor: '#064E3B', shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
+  errorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  errorText: { color: '#991B1B', flex: 1, fontWeight: '700' },
+  successCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  successText: { color: '#166534', flex: 1, fontWeight: '700' },
   heroLabel: { color: '#047857', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
   heroText: { color: '#14532D', marginTop: 6, lineHeight: 20 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 14, marginBottom: 12, shadowColor: '#064E3B', shadowOpacity: 0.06, shadowRadius: 10, elevation: 1 },

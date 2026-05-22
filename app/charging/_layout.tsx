@@ -8,6 +8,7 @@ export default function ChargingLayout() {
       }}
     >
       <Stack.Screen name="stations-list" />
+      <Stack.Screen name="nearby-map" />
       <Stack.Screen name="station-details" />
       <Stack.Screen name="connector-selection" />
       <Stack.Screen name="slot-booking" />

@@ -1,18 +1,22 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+
+import { useAuth } from './fleet-management/AuthContext';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { register } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -58,8 +62,20 @@ export default function RegisterScreen() {
     return Object.keys(next).length === 0;
   }
 
-  function handleRegister() {
+  async function handleRegister() {
     if (!validate()) return;
+
+    const registered = await register({
+      fullName,
+      email: email.trim(),
+      phone: mobile.trim(),
+      password,
+    });
+
+    if (!registered) {
+      Alert.alert('Registration failed', 'Please try again.');
+      return;
+    }
 
     router.push('/role-selection');
   }

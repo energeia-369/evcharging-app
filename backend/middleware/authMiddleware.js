@@ -20,6 +20,7 @@ const protect = async (req, res, next) => {
     }
 
     req.user = user;
+    req.user.userId = user._id.toString();
     next();
   } catch (error) {
     next(error);

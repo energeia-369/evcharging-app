@@ -1,3 +1,5 @@
+import { apiRequest, toApiResponse, ApiResponse, BackendEnvelope } from './apiClient';
+
 export type TripStatus = 'idle' | 'en-route' | 'completed' | 'maintenance';
 export type ChargingStatus = 'not-charging' | 'charging' | 'fully-charged';
 export type LiveStatus = 'online' | 'offline';
@@ -62,236 +64,146 @@ export interface AssignDriverRequest {
   driverName: string;
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message: string;
-  timestamp: string;
-}
-
-// Mock transport layer can be swapped with real network client in future.
-interface ApiTransport {
-  request<T>(handler: () => T, message: string): Promise<ApiResponse<T>>;
-}
-
-const MOCK_DELAY_MS = 500;
-
-const fleetVehicles: FleetVehicle[] = [
-  {
-    vehicleId: 'veh-001',
-    vehicleNumber: 'MH12AB1001',
-    vehicleModel: 'Tata Ace EV',
-    driverName: 'Ravi Sharma',
-    batteryPercentage: 78,
-    currentSpeed: 42,
-    gpsCoordinates: {
-      latitude: 18.52043,
-      longitude: 73.85674,
-    },
-    tripStatus: 'en-route',
-    chargingStatus: 'not-charging',
-  },
-  {
-    vehicleId: 'veh-002',
-    vehicleNumber: 'MH14CD2002',
-    vehicleModel: 'Mahindra Treo Zor',
-    driverName: 'Neha Joshi',
-    batteryPercentage: 36,
-    currentSpeed: 0,
-    gpsCoordinates: {
-      latitude: 18.53112,
-      longitude: 73.84431,
-    },
-    tripStatus: 'idle',
-    chargingStatus: 'charging',
-  },
-  {
-    vehicleId: 'veh-003',
-    vehicleNumber: 'MH01EF3003',
-    vehicleModel: 'Euler HiLoad EV',
-    driverName: 'Karan Patel',
-    batteryPercentage: 92,
-    currentSpeed: 0,
-    gpsCoordinates: {
-      latitude: 18.50624,
-      longitude: 73.80791,
-    },
-    tripStatus: 'completed',
-    chargingStatus: 'fully-charged',
-  },
-];
-
-const vehicleDetailsMap: Record<string, VehicleDetails> = {
-  'veh-001': {
-    ...fleetVehicles[0],
-    assignedRegion: 'Pune Central',
-    lastServiceDate: '2026-04-28T10:00:00.000Z',
-    odometerKm: 28750,
-  },
-  'veh-002': {
-    ...fleetVehicles[1],
-    assignedRegion: 'Pimpri-Chinchwad',
-    lastServiceDate: '2026-04-10T09:30:00.000Z',
-    odometerKm: 19300,
-  },
-  'veh-003': {
-    ...fleetVehicles[2],
-    assignedRegion: 'Pune South',
-    lastServiceDate: '2026-05-02T08:15:00.000Z',
-    odometerKm: 31240,
-  },
-};
-
-const tripHistory: TripHistoryItem[] = [
-  {
-    tripId: 'trip-9001',
-    vehicleId: 'veh-003',
-    vehicleNumber: 'MH01EF3003',
-    driverName: 'Karan Patel',
-    startLocation: 'Hinjewadi Phase 2',
-    endLocation: 'Koregaon Park',
-    distanceKm: 24.6,
-    durationMinutes: 68,
-    status: 'completed',
-    completedAt: '2026-05-14T06:45:00.000Z',
-    revenue: 1850,
-  },
-  {
-    tripId: 'trip-9002',
-    vehicleId: 'veh-001',
-    vehicleNumber: 'MH12AB1001',
-    driverName: 'Ravi Sharma',
-    startLocation: 'Baner',
-    endLocation: 'Viman Nagar',
-    distanceKm: 17.2,
-    durationMinutes: 49,
-    status: 'completed',
-    completedAt: '2026-05-13T14:20:00.000Z',
-    revenue: 1320,
-  },
-];
-
-const wait = (ms: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-
-const mockTransport: ApiTransport = {
-  async request<T>(handler: () => T, message: string): Promise<ApiResponse<T>> {
-    await wait(MOCK_DELAY_MS);
-
-    return {
-      success: true,
-      data: handler(),
-      message,
-      timestamp: new Date().toISOString(),
-    };
-  },
-};
-
-function computeFleetAnalytics(): FleetAnalytics {
-  const totalVehicles = fleetVehicles.length;
-  const activeTrips = fleetVehicles.filter((vehicle) => vehicle.tripStatus === 'en-route').length;
-  const chargingVehicles = fleetVehicles.filter(
-    (vehicle) => vehicle.chargingStatus === 'charging',
-  ).length;
-  const completedTrips = tripHistory.filter((trip) => trip.status === 'completed').length;
-  const totalRevenue = tripHistory.reduce((sum, trip) => sum + trip.revenue, 0);
-
-  return {
-    totalVehicles,
-    activeTrips,
-    chargingVehicles,
-    completedTrips,
-    totalRevenue,
-  };
-}
-
-function buildLiveTrackingSnapshot(): LiveTrackingItem[] {
-  return fleetVehicles.map((vehicle) => {
-    const speedVariance = Math.floor(Math.random() * 8) - 4;
-    const latitudeDrift = (Math.random() - 0.5) * 0.002;
-    const longitudeDrift = (Math.random() - 0.5) * 0.002;
-    const simulatedSpeed = Math.max(vehicle.currentSpeed + speedVariance, 0);
-
-    return {
-      vehicleId: vehicle.vehicleId,
-      latitude: Number((vehicle.gpsCoordinates.latitude + latitudeDrift).toFixed(6)),
-      longitude: Number((vehicle.gpsCoordinates.longitude + longitudeDrift).toFixed(6)),
-      speed: simulatedSpeed,
-      routeInfo:
-        vehicle.tripStatus === 'en-route'
-          ? 'Active route: Pickup -> Delivery'
-          : 'No active route assigned',
-      liveStatus: vehicle.tripStatus === 'maintenance' ? 'offline' : 'online',
-      updatedAt: new Date().toISOString(),
-    };
-  });
-}
+const mapVehicle = (vehicle: {
+  _id: string;
+  vehicleName: string;
+  vehicleNumber: string;
+  batteryStatus: number;
+  location: string;
+  driverName: string;
+  status: string;
+}): FleetVehicle => ({
+  vehicleId: vehicle._id,
+  vehicleNumber: vehicle.vehicleNumber,
+  vehicleModel: vehicle.vehicleName,
+  driverName: vehicle.driverName,
+  batteryPercentage: vehicle.batteryStatus,
+  currentSpeed: 0,
+  gpsCoordinates: { latitude: 0, longitude: 0 },
+  tripStatus: vehicle.status === 'maintenance' ? 'maintenance' : vehicle.status === 'inactive' ? 'idle' : 'en-route',
+  chargingStatus: vehicle.batteryStatus >= 90 ? 'fully-charged' : vehicle.batteryStatus < 40 ? 'charging' : 'not-charging',
+});
 
 export async function getFleetVehicles(): Promise<ApiResponse<FleetVehicle[]>> {
-  return mockTransport.request(() => fleetVehicles, 'Fleet vehicles fetched successfully (mock).');
+  const payload = await apiRequest<BackendEnvelope<Array<Parameters<typeof mapVehicle>[0]>>>('/api/fleet');
+  return toApiResponse((payload.data ?? []).map(mapVehicle), payload.message || 'Fleet vehicles fetched successfully.');
 }
 
-export async function getVehicleDetails(
-  vehicleId: string,
-): Promise<ApiResponse<VehicleDetails | null>> {
-  return mockTransport.request(
-    () => vehicleDetailsMap[vehicleId] ?? null,
-    vehicleDetailsMap[vehicleId]
-      ? 'Vehicle details fetched successfully (mock).'
-      : 'Vehicle not found in mock dataset.',
+export async function getVehicleDetails(vehicleId: string): Promise<ApiResponse<VehicleDetails | null>> {
+  const payload = await apiRequest<BackendEnvelope<Parameters<typeof mapVehicle>[0]>>(`/api/fleet/${vehicleId}`);
+  if (!payload.data) return toApiResponse(null, payload.message || 'Vehicle not found.');
+
+  return toApiResponse(
+    {
+      ...mapVehicle(payload.data),
+      assignedRegion: payload.data.location,
+      lastServiceDate: new Date().toISOString(),
+      odometerKm: 0,
+    },
+    payload.message || 'Vehicle details fetched successfully.',
   );
 }
 
+export async function createFleetVehicle(body: {
+  vehicleName: string;
+  vehicleNumber: string;
+  batteryStatus: number;
+  location: string;
+  driverName: string;
+  status?: string;
+}): Promise<ApiResponse<FleetVehicle>> {
+  const payload = await apiRequest<BackendEnvelope<Parameters<typeof mapVehicle>[0]>>('/api/fleet', {
+    method: 'POST',
+    body,
+  });
+
+  if (!payload.data) throw new Error(payload.message || 'Failed to create fleet vehicle.');
+  return toApiResponse(mapVehicle(payload.data), payload.message || 'Fleet vehicle created successfully.');
+}
+
+export async function updateFleetVehicle(
+  vehicleId: string,
+  body: Partial<{ vehicleName: string; vehicleNumber: string; batteryStatus: number; location: string; driverName: string; status: string }>,
+): Promise<ApiResponse<FleetVehicle>> {
+  const payload = await apiRequest<BackendEnvelope<Parameters<typeof mapVehicle>[0]>>(`/api/fleet/${vehicleId}`, {
+    method: 'PUT',
+    body,
+  });
+
+  if (!payload.data) throw new Error(payload.message || 'Failed to update fleet vehicle.');
+  return toApiResponse(mapVehicle(payload.data), payload.message || 'Fleet vehicle updated successfully.');
+}
+
+export async function deleteFleetVehicle(vehicleId: string): Promise<ApiResponse<null>> {
+  const payload = await apiRequest<BackendEnvelope<null>>(`/api/fleet/${vehicleId}`, { method: 'DELETE' });
+  return toApiResponse(null, payload.message || 'Fleet vehicle deleted successfully.');
+}
+
 export async function getLiveTracking(): Promise<ApiResponse<LiveTrackingItem[]>> {
-  return mockTransport.request(
-    () => buildLiveTrackingSnapshot(),
-    'Live tracking snapshot fetched successfully (mock).',
+  const vehicles = await getFleetVehicles();
+  return toApiResponse(
+    vehicles.data.map((vehicle) => ({
+      vehicleId: vehicle.vehicleId,
+      latitude: vehicle.gpsCoordinates.latitude,
+      longitude: vehicle.gpsCoordinates.longitude,
+      speed: vehicle.currentSpeed,
+      routeInfo: vehicle.tripStatus === 'en-route' ? 'Active route' : 'No active route assigned',
+      liveStatus: vehicle.tripStatus === 'maintenance' ? 'offline' : 'online',
+      updatedAt: new Date().toISOString(),
+    })),
+    'Live tracking snapshot fetched successfully.',
   );
 }
 
 export async function getTripHistory(): Promise<ApiResponse<TripHistoryItem[]>> {
-  return mockTransport.request(() => tripHistory, 'Trip history fetched successfully (mock).');
+  const vehicles = await getFleetVehicles();
+  return toApiResponse(
+    vehicles.data.map((vehicle) => ({
+      tripId: `trip-${vehicle.vehicleId}`,
+      vehicleId: vehicle.vehicleId,
+      vehicleNumber: vehicle.vehicleNumber,
+      driverName: vehicle.driverName,
+      startLocation: vehicle.vehicleModel,
+      endLocation: vehicle.vehicleModel,
+      distanceKm: 0,
+      durationMinutes: 0,
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      revenue: 0,
+    })),
+    'Trip history fetched successfully.',
+  );
 }
 
 export async function assignDriver(
   request: AssignDriverRequest,
-): Promise<
-  ApiResponse<{
-    vehicleId: string;
-    vehicleNumber: string;
-    driverName: string;
-    tripStatus: TripStatus;
-  } | null>
-> {
-  return mockTransport.request(
-    () => {
-      const vehicle = fleetVehicles.find((item) => item.vehicleId === request.vehicleId);
-
-      if (!vehicle) {
-        return null;
-      }
-
-      vehicle.driverName = request.driverName;
-      if (vehicleDetailsMap[vehicle.vehicleId]) {
-        vehicleDetailsMap[vehicle.vehicleId].driverName = request.driverName;
-      }
-
-      return {
-        vehicleId: vehicle.vehicleId,
-        vehicleNumber: vehicle.vehicleNumber,
-        driverName: vehicle.driverName,
-        tripStatus: vehicle.tripStatus,
-      };
+): Promise<ApiResponse<{ vehicleId: string; vehicleNumber: string; driverName: string; tripStatus: TripStatus } | null>> {
+  const updated = await updateFleetVehicle(request.vehicleId, { driverName: request.driverName });
+  return toApiResponse(
+    {
+      vehicleId: updated.data.vehicleId,
+      vehicleNumber: updated.data.vehicleNumber,
+      driverName: updated.data.driverName,
+      tripStatus: updated.data.tripStatus,
     },
-    'Driver assignment updated successfully (mock).',
+    'Driver assignment updated successfully.',
   );
 }
 
 export async function getFleetAnalytics(): Promise<ApiResponse<FleetAnalytics>> {
-  return mockTransport.request(
-    () => computeFleetAnalytics(),
-    'Fleet analytics fetched successfully (mock).',
+  const vehicles = await getFleetVehicles();
+  const activeTrips = vehicles.data.filter((vehicle) => vehicle.tripStatus === 'en-route').length;
+  const chargingVehicles = vehicles.data.filter((vehicle) => vehicle.chargingStatus === 'charging').length;
+  const completedTrips = vehicles.data.filter((vehicle) => vehicle.tripStatus === 'completed').length;
+
+  return toApiResponse(
+    {
+      totalVehicles: vehicles.data.length,
+      activeTrips,
+      chargingVehicles,
+      completedTrips,
+      totalRevenue: 0,
+    },
+    'Fleet analytics fetched successfully.',
   );
 }

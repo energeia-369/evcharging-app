@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
@@ -14,6 +15,7 @@ interface StationCoordinate {
   acSlots: number;
   dcSlots: number;
   status: 'available' | 'busy' | 'offline';
+  distanceKm?: number;
 }
 
 interface EvChargingMapProps {
@@ -29,12 +31,31 @@ export default function EvChargingMap({
   onSelectStation,
   style,
 }: EvChargingMapProps) {
+  const mapRef = useRef<MapView | null>(null);
+
+  useEffect(() => {
+    if (!userLocation) {
+      return;
+    }
+
+    mapRef.current?.animateToRegion(
+      {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.04,
+      },
+      650
+    );
+  }, [userLocation]);
+
   if (!userLocation) {
     return null;
   }
 
   return (
     <MapView
+      ref={mapRef}
       style={style}
       initialRegion={{
         latitude: userLocation.latitude,
@@ -42,14 +63,10 @@ export default function EvChargingMap({
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       }}
-      region={{
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      }}
       showsUserLocation
-      followsUserLocation
+      showsMyLocationButton
+      zoomEnabled
+      loadingEnabled
     >
       <Marker
         coordinate={{
@@ -58,7 +75,7 @@ export default function EvChargingMap({
         }}
         title="Your Location"
         description="Current position"
-        pinColor="#10b981"
+        pinColor="#2563EB"
       />
 
       {stationCoordinates.map((station) => (
@@ -69,7 +86,7 @@ export default function EvChargingMap({
             longitude: station.longitude,
           }}
           title={station.name}
-          description={`AC: ${station.acSlots} | DC: ${station.dcSlots}`}
+          description={`${station.distanceKm !== undefined ? `${station.distanceKm.toFixed(2)} km away · ` : ''}AC: ${station.acSlots} | DC: ${station.dcSlots}`}
           pinColor={station.status === 'available' ? '#0891b2' : station.status === 'busy' ? '#f59e0b' : '#94a3b8'}
           onPress={() => onSelectStation(station.id)}
         />

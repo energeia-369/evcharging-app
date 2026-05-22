@@ -1,10 +1,12 @@
-export interface CarSpecifications {
+import { apiRequest, toApiResponse, ApiResponse, BackendEnvelope } from './apiClient';
+
+export type CarSpecifications = {
   motorType: string;
   topSpeedKmph: number;
   seatingCapacity: number;
   accelerationZeroToHundredSeconds: number;
   driveType: string;
-}
+};
 
 export interface EvCar {
   id: string;
@@ -36,148 +38,125 @@ export interface TestDriveBooking {
   createdAt: string;
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message: string;
-  timestamp: string;
-}
-
-const MOCK_DELAY_MS = 380;
-
-const mockCars: EvCar[] = [
-  {
-    id: 'car-001',
-    carName: 'Energeia Volt X',
-    price: 1899000,
-    batteryRangeKm: 420,
-    chargingTimeHours: 1.2,
-    specifications: {
-      motorType: 'Permanent Magnet Synchronous',
-      topSpeedKmph: 160,
-      seatingCapacity: 5,
-      accelerationZeroToHundredSeconds: 7.4,
-      driveType: 'FWD',
-    },
-    images: [
-      'https://images.unsplash.com/photo-1549924231-f129b911e442',
-      'https://images.unsplash.com/photo-1619767886558-efdc259cde1a',
-    ],
+const mapVehicle = (vehicle: {
+  _id: string;
+  vehicleName: string;
+  model: string;
+  price: number;
+  batteryRange: number;
+  stock: number;
+  image: string;
+}): EvCar => ({
+  id: vehicle._id,
+  carName: vehicle.vehicleName,
+  price: vehicle.price,
+  batteryRangeKm: vehicle.batteryRange,
+  chargingTimeHours: 0,
+  specifications: {
+    motorType: vehicle.model,
+    topSpeedKmph: 0,
+    seatingCapacity: vehicle.stock > 0 ? 5 : 0,
+    accelerationZeroToHundredSeconds: 0,
+    driveType: 'FWD',
   },
-  {
-    id: 'car-002',
-    carName: 'Energeia Urban E-SUV',
-    price: 2499000,
-    batteryRangeKm: 510,
-    chargingTimeHours: 1.5,
-    specifications: {
-      motorType: 'Dual Motor AWD',
-      topSpeedKmph: 180,
-      seatingCapacity: 5,
-      accelerationZeroToHundredSeconds: 6.1,
-      driveType: 'AWD',
-    },
-    images: [
-      'https://images.unsplash.com/photo-1494976388531-d1058494cdd8',
-      'https://images.unsplash.com/photo-1503376780353-7e6692767b70',
-    ],
-  },
-  {
-    id: 'car-003',
-    carName: 'Energeia City Compact',
-    price: 1399000,
-    batteryRangeKm: 320,
-    chargingTimeHours: 0.9,
-    specifications: {
-      motorType: 'Single Motor',
-      topSpeedKmph: 140,
-      seatingCapacity: 4,
-      accelerationZeroToHundredSeconds: 9.2,
-      driveType: 'FWD',
-    },
-    images: [
-      'https://images.unsplash.com/photo-1503736334956-4c8f8e92946d',
-      'https://images.unsplash.com/photo-1553440569-bcc63803a83d',
-    ],
-  },
-];
-
-const mockBookings: TestDriveBooking[] = [
-  {
-    bookingId: 'td-1001',
-    carId: 'car-001',
-    carName: 'Energeia Volt X',
-    customerName: 'Aarav Singh',
-    customerPhone: '+91-9876500011',
-    preferredDate: '2026-05-16',
-    preferredTimeSlot: '10:00-11:00',
-    status: 'booked',
-    createdAt: '2026-05-14T08:30:00.000Z',
-  },
-  {
-    bookingId: 'td-1002',
-    carId: 'car-002',
-    carName: 'Energeia Urban E-SUV',
-    customerName: 'Isha Kulkarni',
-    customerPhone: '+91-9876500022',
-    preferredDate: '2026-05-15',
-    preferredTimeSlot: '14:00-15:00',
-    status: 'completed',
-    createdAt: '2026-05-13T11:45:00.000Z',
-  },
-];
-
-const wait = (ms: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-
-async function buildResponse<T>(data: T, message: string): Promise<ApiResponse<T>> {
-  await wait(MOCK_DELAY_MS);
-
-  return {
-    success: true,
-    data,
-    message,
-    timestamp: new Date().toISOString(),
-  };
-}
+  images: vehicle.image ? [vehicle.image] : [],
+});
 
 export async function getCars(): Promise<ApiResponse<EvCar[]>> {
-  return buildResponse(mockCars, 'EV cars fetched successfully.');
+  const payload = await apiRequest<BackendEnvelope<Array<Parameters<typeof mapVehicle>[0]>>>('/api/showroom');
+  return toApiResponse((payload.data ?? []).map(mapVehicle), payload.message || 'Vehicles fetched successfully.');
 }
 
 export async function getCarDetails(carId: string): Promise<ApiResponse<EvCar | null>> {
-  const car = mockCars.find((item) => item.id === carId) ?? null;
+  const payload = await apiRequest<BackendEnvelope<Parameters<typeof mapVehicle>[0]>>(`/api/showroom/${carId}`);
+  return toApiResponse(payload.data ? mapVehicle(payload.data) : null, payload.message || 'Vehicle fetched successfully.');
+}
 
-  return buildResponse(
-    car,
-    car ? 'EV car details fetched successfully.' : 'Car not found in mock dataset.',
-  );
+export async function createVehicle(body: {
+  vehicleName: string;
+  model: string;
+  price: number;
+  batteryRange: number;
+  stock: number;
+  image: string;
+}): Promise<ApiResponse<EvCar>> {
+  const payload = await apiRequest<BackendEnvelope<Parameters<typeof mapVehicle>[0]>>('/api/showroom', {
+    method: 'POST',
+    body,
+  });
+
+  if (!payload.data) throw new Error(payload.message || 'Failed to add vehicle.');
+  return toApiResponse(mapVehicle(payload.data), payload.message || 'Vehicle added successfully.');
+}
+
+export async function updateVehicle(
+  vehicleId: string,
+  body: Partial<{ vehicleName: string; model: string; price: number; batteryRange: number; stock: number; image: string }>,
+): Promise<ApiResponse<EvCar>> {
+  const payload = await apiRequest<BackendEnvelope<Parameters<typeof mapVehicle>[0]>>(`/api/showroom/${vehicleId}`, {
+    method: 'PUT',
+    body,
+  });
+
+  if (!payload.data) throw new Error(payload.message || 'Failed to update vehicle.');
+  return toApiResponse(mapVehicle(payload.data), payload.message || 'Vehicle updated successfully.');
+}
+
+export async function deleteVehicle(vehicleId: string): Promise<ApiResponse<null>> {
+  const payload = await apiRequest<BackendEnvelope<null>>(`/api/showroom/${vehicleId}`, { method: 'DELETE' });
+  return toApiResponse(null, payload.message || 'Vehicle deleted successfully.');
 }
 
 export async function bookTestDrive(
   request: TestDriveRequest,
 ): Promise<ApiResponse<TestDriveBooking>> {
-  const car = mockCars.find((item) => item.id === request.carId);
+  const payload = await apiRequest<BackendEnvelope<{ _id: string; vehicle: string; customerName: string; phone: string; preferredDate: string; status: 'requested' | 'confirmed' | 'completed' | 'cancelled'; createdAt: string }>>(
+    '/api/showroom/book-test-drive',
+    {
+      method: 'POST',
+      body: {
+        vehicleId: request.carId,
+        customerName: request.customerName,
+        phone: request.customerPhone,
+        preferredDate: request.preferredDate,
+        notes: request.preferredTimeSlot,
+      },
+    },
+  );
 
-  const booking: TestDriveBooking = {
-    bookingId: `td-${Date.now()}`,
-    carId: request.carId,
-    carName: car?.carName ?? 'Unknown Car',
-    customerName: request.customerName,
-    customerPhone: request.customerPhone,
-    preferredDate: request.preferredDate,
-    preferredTimeSlot: request.preferredTimeSlot,
-    status: 'booked',
-    createdAt: new Date().toISOString(),
-  };
+  if (!payload.data) throw new Error(payload.message || 'Failed to book test drive.');
 
-  mockBookings.unshift(booking);
-
-  return buildResponse(booking, 'Test drive booked successfully (mock).');
+  return toApiResponse(
+    {
+      bookingId: payload.data._id,
+      carId: request.carId,
+      carName: 'Vehicle',
+      customerName: payload.data.customerName,
+      customerPhone: payload.data.phone,
+      preferredDate: payload.data.preferredDate,
+      preferredTimeSlot: request.preferredTimeSlot,
+      status: 'booked',
+      createdAt: payload.data.createdAt,
+    },
+    payload.message || 'Test drive booked successfully.',
+  );
 }
 
 export async function getBookings(): Promise<ApiResponse<TestDriveBooking[]>> {
-  return buildResponse(mockBookings, 'Test drive bookings fetched successfully.');
+  const payload = await apiRequest<BackendEnvelope<Array<{ _id: string; vehicle: { _id: string; vehicleName: string }; customerName: string; phone: string; preferredDate: string; notes: string; status: 'requested' | 'confirmed' | 'completed' | 'cancelled'; createdAt: string }>>>('/api/showroom/bookings');
+
+  return toApiResponse(
+    (payload.data ?? []).map((booking) => ({
+      bookingId: booking._id,
+      carId: booking.vehicle._id,
+      carName: booking.vehicle.vehicleName,
+      customerName: booking.customerName,
+      customerPhone: booking.phone,
+      preferredDate: booking.preferredDate,
+      preferredTimeSlot: booking.notes,
+      status: booking.status === 'requested' ? 'booked' : booking.status,
+      createdAt: booking.createdAt,
+    })),
+    payload.message || 'Test drive bookings fetched successfully.',
+  );
 }

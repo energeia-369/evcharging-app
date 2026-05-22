@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     ScrollView,
@@ -66,9 +66,16 @@ const features: CafeFeature[] = [
 
 export default function OasisCafeScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleFeaturePress = (feature: CafeFeature) => {
     if (feature.route) {
+      Alert.alert('Success', `${feature.title} opened successfully.`);
       router.push(feature.route as any);
       return;
     }
@@ -126,25 +133,45 @@ export default function OasisCafeScreen() {
           <Text style={styles.sectionTitle}>What this module does</Text>
         </View>
 
-        {features.map((feature) => (
-          <TouchableOpacity
-            key={feature.title}
-            style={styles.featureCard}
-            activeOpacity={0.85}
-            onPress={() => handleFeaturePress(feature)}
-          >
-            <View style={[styles.featureIconWrap, { backgroundColor: `${feature.accent}14` }]}>
-              <MaterialCommunityIcons name={feature.icon as any} size={24} color={feature.accent} />
-            </View>
+        {loading ? (
+          <View style={styles.loadingStack}>
+            {[0, 1, 2].map((item) => (
+              <View key={item} style={styles.loadingCard}>
+                <View style={styles.loadingIcon} />
+                <View style={styles.loadingTextWrap}>
+                  <View style={styles.loadingLine} />
+                  <View style={[styles.loadingLine, { width: '70%' }]} />
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : features.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <MaterialCommunityIcons name="silverware-fork-knife-off" size={22} color="#94A3B8" />
+            <Text style={styles.emptyTitle}>No cafe features available</Text>
+            <Text style={styles.emptyText}>Try again in a moment or refresh the module.</Text>
+          </View>
+        ) : (
+          features.map((feature) => (
+            <TouchableOpacity
+              key={feature.title}
+              style={styles.featureCard}
+              activeOpacity={0.85}
+              onPress={() => handleFeaturePress(feature)}
+            >
+              <View style={[styles.featureIconWrap, { backgroundColor: `${feature.accent}14` }]}> 
+                <MaterialCommunityIcons name={feature.icon as any} size={24} color={feature.accent} />
+              </View>
 
-            <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>{feature.title}</Text>
-              <Text style={styles.featureDescription}>{feature.description}</Text>
-            </View>
+              <View style={styles.featureText}>
+                <Text style={styles.featureTitle}>{feature.title}</Text>
+                <Text style={styles.featureDescription}>{feature.description}</Text>
+              </View>
 
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#CBD5E1" />
-          </TouchableOpacity>
-        ))}
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#CBD5E1" />
+            </TouchableOpacity>
+          ))
+        )}
 
         <View style={styles.actionCard}>
           <Text style={styles.actionTitle}>Ready to turn this on?</Text>
@@ -269,6 +296,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     marginTop: 16,
+  },
+  loadingStack: {
+    gap: 10,
+  },
+  loadingCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#FED7AA',
+  },
+  loadingTextWrap: {
+    flex: 1,
+    gap: 8,
+  },
+  loadingLine: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: '#FDBA74',
+    width: '90%',
+  },
+  emptyCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFFFF',
+    padding: 18,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyTitle: {
+    color: '#7C2D12',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  emptyText: {
+    color: '#9A3412',
+    textAlign: 'center',
   },
   statCard: {
     flex: 1,

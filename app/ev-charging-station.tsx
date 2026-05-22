@@ -1,5 +1,4 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -13,6 +12,16 @@ import {
 } from 'react-native';
 
 import EvChargingMap from '@/components/ev-charging-map';
+import {
+  getNearbyChargingStations,
+  NearbyChargingStation,
+} from '@/services/chargingApi';
+import {
+  Coordinates,
+  getCurrentCoordinates,
+  requestLocationPermission,
+  watchCurrentCoordinates,
+} from '@/services/locationService';
 
 type TabType = 'map' | 'stations' | 'availability' | 'booking' | 'session' | 'history' | 'payment' | 'invoice';
 
@@ -34,6 +43,7 @@ interface Station {
   status: StationStatus;
   latitude: number;
   longitude: number;
+  availableSlots?: number;
 }
 
 interface ChargingSession {
@@ -93,6 +103,9 @@ const fallbackStations: Station[] = [
     longitude: -122.1484,
   },
 ];
+
+const LOCATION_REFRESH_INTERVAL_MS = 6000;
+const LOCATION_MOVE_THRESHOLD_KM = 0.01;
 
 const mockHistory: ChargingSession[] = [
   {
@@ -158,6 +171,34 @@ const createFallbackStations = (coords: LocationCoords): Station[] => {
     .sort((a, b) => a.name.localeCompare(b.name));
 };
 
+const normalizeNearbyStations = (stations: NearbyChargingStation[], coords: LocationCoords): Station[] => {
+  return stations
+    .map((station, index) => {
+      const latitude = station.coordinates?.latitude ?? station.latitude ?? coords.latitude;
+      const longitude = station.coordinates?.longitude ?? station.longitude ?? coords.longitude;
+      const isDc = /dc|fast/i.test(station.chargerType || '');
+      const availableSlots = station.availableSlots ?? 0;
+
+      return {
+        id: station.id || station._id || `${index}`,
+        name: station.name || station.stationName,
+        location: station.location || 'Nearby charging station',
+        rating: 4.5,
+        acSlots: station.acSlots ?? (isDc ? 0 : availableSlots),
+        dcSlots: station.dcSlots ?? (isDc ? availableSlots : 0),
+        status:
+          station.status === 'maintenance' || station.status === 'inactive'
+            ? 'busy'
+            : (station.status as StationStatus) || 'available',
+        latitude,
+        longitude,
+        availableSlots,
+        distanceKm: station.distanceKm ?? station.distance,
+      } satisfies Station;
+    })
+    .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
+};
+
 const buildLiveStationList = (elements: any[], coords: LocationCoords): Station[] => {
   return elements
     .map((element, index) => {
@@ -220,112 +261,149 @@ export default function EVChargingStationScreen() {
   const [stations, setStations] = useState<Station[]>(fallbackStations);
   const [stationsLoading, setStationsLoading] = useState(false);
   const [stationsError, setStationsError] = useState<string | null>(null);
-  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const locationSubscriptionRef = useRef<{ remove: () => void } | null>(null);
   const lastFetchedLocationRef = useRef<LocationCoords | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    requestLocationPermission();
+    isMountedRef.current = true;
+
+    const bootstrapNearbyStations = async () => {
+      setStationsLoading(true);
+      setStationsError(null);
+      setLocationError(null);
+
+      try {
+        const permissionResult = await requestLocationPermission();
+
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        if (!permissionResult.data) {
+          setLocationError(permissionResult.error || 'Location permission denied');
+          setStations(createFallbackStations({ latitude: fallbackStations[0].latitude, longitude: fallbackStations[0].longitude }));
+          setIsInitialLoading(false);
+          return;
+        }
+
+        const currentLocationResult = await getCurrentCoordinates();
+
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        if (!currentLocationResult.data) {
+          setLocationError(currentLocationResult.error || 'Unable to read your current location');
+          setStations(createFallbackStations({ latitude: fallbackStations[0].latitude, longitude: fallbackStations[0].longitude }));
+          setIsInitialLoading(false);
+          return;
+        }
+
+        const currentLocation = currentLocationResult.data.coords;
+        setUserLocation(currentLocation);
+        lastFetchedLocationRef.current = currentLocation;
+        await fetchNearbyStations(currentLocation, true);
+
+        const watchResult = await watchCurrentCoordinates(
+          ({ coords }) => {
+            if (!isMountedRef.current) {
+              return;
+            }
+
+            const previousLocation = lastFetchedLocationRef.current;
+            const hasMovedEnough =
+              !previousLocation ||
+              calculateDistance(
+                previousLocation.latitude,
+                previousLocation.longitude,
+                coords.latitude,
+                coords.longitude
+              ) >= LOCATION_MOVE_THRESHOLD_KM;
+
+            setUserLocation(coords);
+
+            if (hasMovedEnough) {
+              lastFetchedLocationRef.current = coords;
+              void fetchNearbyStations(coords, true);
+            }
+          },
+          (message) => {
+            if (!isMountedRef.current) {
+              return;
+            }
+
+            setLocationError(message);
+          }
+        );
+
+        if (watchResult.data) {
+          locationSubscriptionRef.current = watchResult.data;
+        }
+
+        refreshTimerRef.current = setInterval(() => {
+          const latestLocation = lastFetchedLocationRef.current;
+          if (latestLocation) {
+            void fetchNearbyStations(latestLocation, true);
+          }
+        }, LOCATION_REFRESH_INTERVAL_MS);
+      } catch {
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        setLocationError('Unable to read your current location');
+        setStations(createFallbackStations({ latitude: fallbackStations[0].latitude, longitude: fallbackStations[0].longitude }));
+      } finally {
+        if (isMountedRef.current) {
+          setStationsLoading(false);
+          setIsInitialLoading(false);
+        }
+      }
+    };
+
+    void bootstrapNearbyStations();
 
     return () => {
+      isMountedRef.current = false;
       locationSubscriptionRef.current?.remove();
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const requestLocationPermission = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        startLocationTracking();
-      } else {
-        setLocationError('Location permission denied');
-      }
-    } catch {
-      setLocationError('Unable to request location permission');
-    }
-  };
-
-  const startLocationTracking = async () => {
-    try {
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      const currentLocation = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      };
-
-      setUserLocation(currentLocation);
-      lastFetchedLocationRef.current = currentLocation;
-      void fetchNearbyStations(currentLocation);
-
-      locationSubscriptionRef.current = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 5000,
-          distanceInterval: 10,
-        },
-        (location) => {
-          const nextLocation = {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          };
-
-          setUserLocation(nextLocation);
-
-          const previousLocation = lastFetchedLocationRef.current;
-          const locationChanged =
-            !previousLocation ||
-            calculateDistance(
-              previousLocation.latitude,
-              previousLocation.longitude,
-              nextLocation.latitude,
-              nextLocation.longitude
-            ) >= 1;
-
-          if (locationChanged) {
-            lastFetchedLocationRef.current = nextLocation;
-            void fetchNearbyStations(nextLocation);
-          }
-        }
-      );
-    } catch {
-      setLocationError('Unable to read your current location');
-    }
-  };
-
-  const fetchNearbyStations = async (coords: LocationCoords) => {
+  const fetchNearbyStations = async (coords: LocationCoords, allowFallback = true) => {
     setStationsLoading(true);
     setStationsError(null);
 
-    const overpassQuery = `[out:json][timeout:25];
-(
-  node["amenity"="charging_station"](around:${SEARCH_RADIUS_METERS},${coords.latitude},${coords.longitude});
-  way["amenity"="charging_station"](around:${SEARCH_RADIUS_METERS},${coords.latitude},${coords.longitude});
-  relation["amenity"="charging_station"](around:${SEARCH_RADIUS_METERS},${coords.latitude},${coords.longitude});
-);
-out center tags;`;
-
     try {
-      const response = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        },
-        body: `data=${encodeURIComponent(overpassQuery)}`,
+      const response = await getNearbyChargingStations({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        radiusKm: 25,
+        limit: 20,
       });
 
-      if (!response.ok) {
-        throw new Error(`Overpass API request failed with status ${response.status}`);
+      const normalizedStations = normalizeNearbyStations(response.data, coords);
+
+      if (normalizedStations.length > 0) {
+        setStations(normalizedStations);
+      } else if (allowFallback) {
+        setStations(createFallbackStations(coords));
+        setStationsError('No nearby charging stations found. Showing fallback stations.');
+      } else {
+        setStations([]);
+      }
+    } catch (error) {
+      if (allowFallback) {
+        setStations(createFallbackStations(coords));
       }
 
-      const data = await response.json();
-      const liveStations = buildLiveStationList(Array.isArray(data?.elements) ? data.elements : [], coords);
-
-      setStations(liveStations.length > 0 ? liveStations : createFallbackStations(coords));
-    } catch {
-      setStations(createFallbackStations(coords));
-      setStationsError('Live charging station data is temporarily unavailable');
+      setStationsError(error instanceof Error ? error.message : 'Nearby charging station data is temporarily unavailable');
     } finally {
       setStationsLoading(false);
     }
@@ -414,6 +492,15 @@ out center tags;`;
         stationLocation: station.location,
       },
     });
+  };
+
+  const handleCurrentLocationPress = () => {
+    if (!userLocation) {
+      return;
+    }
+
+    setSelectedStation(null);
+    setUserLocation({ ...userLocation });
   };
 
   const formatTime = (seconds: number) => {
@@ -510,28 +597,40 @@ out center tags;`;
       >
         {activeTab === 'map' && (
           <View style={styles.mapTabContainer}>
-            {(stationsLoading || stationsError) && (
+            {stationsError ? (
               <Text
                 style={{
                   marginBottom: 10,
-                  color: stationsError ? '#B45309' : '#16A34A',
+                  color: '#B45309',
                   fontSize: 12,
                   fontWeight: '600',
                 }}
               >
-                {stationsLoading ? 'Refreshing nearby charging stations...' : stationsError}
+                {stationsError}
               </Text>
-            )}
+            ) : null}
 
             {/* Map Section */}
             <View style={styles.mapContainer}>
-              {userLocation || isWeb ? (
-                <EvChargingMap
-                  style={styles.map}
-                  userLocation={userLocation}
-                  stationCoordinates={stationsWithDistance}
-                  onSelectStation={(stationId) => setSelectedStation(stationId)}
-                />
+              {isInitialLoading ? (
+                <View style={styles.mapPlaceholder}>
+                  <MaterialCommunityIcons name="progress-clock" size={48} color="#16A34A" />
+                  <Text style={styles.mapErrorText}>Locating your GPS and nearby stations...</Text>
+                </View>
+              ) : userLocation || isWeb ? (
+                <View style={styles.mapWithButtonWrap}>
+                  <EvChargingMap
+                    style={styles.map}
+                    userLocation={userLocation}
+                    stationCoordinates={stationsWithDistance}
+                    onSelectStation={(stationId) => setSelectedStation(stationId)}
+                  />
+
+                  <TouchableOpacity style={styles.currentLocationButton} onPress={handleCurrentLocationPress}>
+                    <MaterialCommunityIcons name="crosshairs-gps" size={18} color="#ffffff" />
+                    <Text style={styles.currentLocationButtonText}>Current location</Text>
+                  </TouchableOpacity>
+                </View>
               ) : (
                 <View style={styles.mapPlaceholder}>
                   <MaterialCommunityIcons name="map-marker-off" size={48} color="#d1d5db" />
@@ -540,6 +639,15 @@ out center tags;`;
                   </Text>
                 </View>
               )}
+
+              {stationsLoading && !isInitialLoading ? (
+                <View style={styles.mapLoadingOverlay}>
+                  <View style={styles.mapLoadingCard}>
+                    <MaterialCommunityIcons name="cloud-sync" size={22} color="#16A34A" />
+                    <Text style={styles.mapLoadingText}>Updating nearby stations...</Text>
+                  </View>
+                </View>
+              ) : null}
             </View>
 
             {/* Selected Station Details Card */}
@@ -802,7 +910,23 @@ out center tags;`;
                     <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.9}>
                       <Text style={styles.secondaryButtonText}>Cancel</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.primaryButton} activeOpacity={0.9}>
+                    <TouchableOpacity
+                      style={styles.primaryButton}
+                      activeOpacity={0.9}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/charging/booking-summary',
+                          params: {
+                            stationId: booking.id,
+                            connectorName: `${booking.type} Charger`,
+                            dateLabel: booking.date,
+                            slotTime: booking.time,
+                            selectedDuration: booking.duration,
+                            totalPrice: '12.50',
+                          },
+                        })
+                      }
+                    >
                       <Text style={styles.primaryButtonText}>View details</Text>
                     </TouchableOpacity>
                   </View>
@@ -817,7 +941,11 @@ out center tags;`;
               </View>
             )}
 
-            <TouchableOpacity style={styles.newBookingButton} activeOpacity={0.9}>
+            <TouchableOpacity
+              style={styles.newBookingButton}
+              activeOpacity={0.9}
+              onPress={() => router.push('/charging/stations-list')}
+            >
               <MaterialCommunityIcons name="plus" size={20} color="white" />
               <Text style={styles.newBookingButtonText}>New Booking</Text>
             </TouchableOpacity>
@@ -1968,6 +2096,10 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
+  mapWithButtonWrap: {
+    flex: 1,
+    position: 'relative',
+  },
   mapPlaceholder: {
     flex: 1,
     justifyContent: 'center',
@@ -1979,6 +2111,53 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
+  },
+  currentLocationButton: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#0F766E',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  currentLocationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  mapLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.58)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapLoadingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  mapLoadingText: {
+    color: '#14532D',
+    fontSize: 12,
+    fontWeight: '700',
   },
   stationDetailsCard: {
     backgroundColor: 'white',

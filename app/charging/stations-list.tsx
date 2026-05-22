@@ -164,8 +164,7 @@ export default function ChargingStationsListScreen() {
   };
 
   const handleMapView = () => {
-    // TODO: Navigate to map view when available
-    alert('Map View - Coming Soon');
+    router.push('/charging/nearby-map');
   };
 
   const renderStationCard = ({ item }: { item: StationData }) => (

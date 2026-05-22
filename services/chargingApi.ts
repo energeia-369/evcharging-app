@@ -1,3 +1,5 @@
+import { apiRequest, ApiResponse, BackendEnvelope, toApiResponse } from './apiClient';
+
 export type ChargingType = 'AC' | 'DC Fast' | 'Ultra Fast';
 export type ChargingStatus = 'idle' | 'booked' | 'charging' | 'completed';
 
@@ -22,10 +24,30 @@ export interface ChargingHistoryRecord {
   energyConsumedKwh: number;
 }
 
+export interface NearbyChargingStation {
+  id: string;
+  _id?: string;
+  name?: string;
+  stationName: string;
+  location: string;
+  latitude?: number;
+  longitude?: number;
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  distance?: number;
+  distanceKm: number;
+  availableSlots: number;
+  acSlots?: number;
+  dcSlots?: number;
+  chargerType: string;
+  status: string;
+}
+
 export interface BookingRequest {
   stationId: string;
-  userId: string;
-  preferredStartTime: string;
+  slotsBooked?: number;
 }
 
 export interface ChargingSessionRequest {
@@ -37,198 +59,269 @@ export interface ChargingSessionStopRequest {
   sessionId: string;
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message: string;
-  timestamp: string;
-}
-
-const MOCK_DELAY_MS = 450;
-
-const mockStations: ChargingStation[] = [
+export const FALLBACK_NEARBY_STATIONS: NearbyChargingStation[] = [
   {
-    id: 'st-001',
-    stationName: 'Energeia Hub - Downtown',
-    chargingType: 'DC Fast',
-    slotAvailability: 2,
-    chargingStatus: 'idle',
-    chargingDurationMinutes: 0,
+    id: 'fallback-downtown-charging-hub',
+    stationName: 'Downtown Charging Hub',
+    location: 'Central district',
+    latitude: 18.5265,
+    longitude: 73.8547,
+    coordinates: { latitude: 18.5265, longitude: 73.8547 },
+    distanceKm: 0.8,
+    availableSlots: 4,
+    acSlots: 2,
+    dcSlots: 2,
+    chargerType: 'DC Fast',
+    status: 'active',
   },
   {
-    id: 'st-002',
-    stationName: 'Green Route Station - North',
-    chargingType: 'AC',
-    slotAvailability: 1,
-    chargingStatus: 'booked',
-    chargingDurationMinutes: 0,
+    id: 'fallback-mall-charging-point',
+    stationName: 'Mall Charging Point',
+    location: 'Shopping complex',
+    latitude: 18.5168,
+    longitude: 73.8621,
+    coordinates: { latitude: 18.5168, longitude: 73.8621 },
+    distanceKm: 1.9,
+    availableSlots: 3,
+    acSlots: 2,
+    dcSlots: 1,
+    chargerType: 'AC/DC',
+    status: 'active',
   },
   {
-    id: 'st-003',
-    stationName: 'ChargePoint Arena - Central',
-    chargingType: 'Ultra Fast',
-    slotAvailability: 0,
-    chargingStatus: 'charging',
-    chargingDurationMinutes: 18,
-  },
-];
-
-const mockHistory: ChargingHistoryRecord[] = [
-  {
-    id: 'hist-001',
-    stationName: 'Energeia Hub - Downtown',
-    chargingType: 'DC Fast',
-    slotAvailability: 0,
-    chargingStatus: 'completed',
-    chargingDurationMinutes: 34,
-    startedAt: '2026-05-11T09:15:00.000Z',
-    endedAt: '2026-05-11T09:49:00.000Z',
-    energyConsumedKwh: 21.6,
-  },
-  {
-    id: 'hist-002',
-    stationName: 'Green Route Station - North',
-    chargingType: 'AC',
-    slotAvailability: 1,
-    chargingStatus: 'completed',
-    chargingDurationMinutes: 62,
-    startedAt: '2026-05-10T16:00:00.000Z',
-    endedAt: '2026-05-10T17:02:00.000Z',
-    energyConsumedKwh: 15.2,
+    id: 'fallback-airport-ev-station',
+    stationName: 'Airport EV Station',
+    location: 'Airport road',
+    latitude: 18.5798,
+    longitude: 73.9126,
+    coordinates: { latitude: 18.5798, longitude: 73.9126 },
+    distanceKm: 8.1,
+    availableSlots: 5,
+    acSlots: 3,
+    dcSlots: 2,
+    chargerType: 'Ultra Fast',
+    status: 'active',
   },
 ];
 
-const activeSessions = new Map<string, {
-  sessionId: string;
-  stationId: string;
-  userId: string;
-  startedAt: string;
-}>();
+export const normalizeNearbyChargingStation = (
+  station: Partial<NearbyChargingStation> & { id?: string; _id?: string },
+  index = 0,
+): NearbyChargingStation | null => {
+  const latitude = station.coordinates?.latitude ?? station.latitude;
+  const longitude = station.coordinates?.longitude ?? station.longitude;
 
-const wait = (ms: number) =>
-  new Promise<void>((resolve) => {
-    setTimeout(resolve, ms);
-  });
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    return null;
+  }
 
-async function mockResponse<T>(data: T, message: string): Promise<ApiResponse<T>> {
-  await wait(MOCK_DELAY_MS);
+  const distanceKm = Number.isFinite(station.distanceKm ?? station.distance) ? Number(station.distanceKm ?? station.distance) : 0;
+  const availableSlots = Number.isFinite(station.availableSlots) ? Number(station.availableSlots) : 0;
 
   return {
-    success: true,
-    data,
-    message,
-    timestamp: new Date().toISOString(),
+    id: station.id || station._id || `station-${index}`,
+    _id: station._id || station.id,
+    name: station.name || station.stationName || 'Charging Station',
+    stationName: station.stationName || station.name || 'Charging Station',
+    location: station.location || 'Nearby charging station',
+    latitude,
+    longitude,
+    coordinates: {
+      latitude,
+      longitude,
+    },
+    distance: Number.isFinite(station.distance) ? Number(station.distance) : distanceKm,
+    distanceKm,
+    availableSlots,
+    acSlots: Number.isFinite(station.acSlots) ? Number(station.acSlots) : undefined,
+    dcSlots: Number.isFinite(station.dcSlots) ? Number(station.dcSlots) : undefined,
+    chargerType: station.chargerType || 'AC',
+    status: station.status || 'active',
   };
-}
+};
+
+export const createFallbackNearbyStations = (
+  coords: { latitude: number; longitude: number },
+): NearbyChargingStation[] =>
+  FALLBACK_NEARBY_STATIONS.map((station, index) => ({
+    ...station,
+    id: `${station.id}-${index}`,
+    _id: `${station.id}-${index}`,
+    distanceKm: Number((1 + index * 1.75).toFixed(2)),
+    coordinates: {
+      latitude: coords.latitude + (index === 0 ? 0.006 : index === 1 ? -0.007 : 0.009),
+      longitude: coords.longitude + (index === 0 ? 0.005 : index === 1 ? 0.006 : -0.008),
+    },
+    latitude: coords.latitude + (index === 0 ? 0.006 : index === 1 ? -0.007 : 0.009),
+    longitude: coords.longitude + (index === 0 ? 0.005 : index === 1 ? 0.006 : -0.008),
+  }));
+
+const mapStation = (station: {
+  _id: string;
+  stationName: string;
+  location?: {
+    type?: 'Point';
+    coordinates?: [number, number];
+  } | string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  chargerType: string;
+  chargingSpeed?: string;
+  totalConnectors?: number;
+  availableSlots: number;
+  rating?: number;
+  status: string;
+}): ChargingStation => ({
+  id: station._id,
+  stationName: station.stationName,
+  chargingType: (station.chargerType as ChargingType) || 'AC',
+  slotAvailability: station.availableSlots,
+  chargingStatus: station.status === 'maintenance' ? 'completed' : station.status === 'inactive' ? 'idle' : 'booked',
+  chargingDurationMinutes: 0,
+});
 
 export async function getChargingStations(): Promise<ApiResponse<ChargingStation[]>> {
-  return mockResponse(mockStations, 'Charging stations fetched successfully.');
+  const payload = await apiRequest<BackendEnvelope<Array<Parameters<typeof mapStation>[0]>>>('/api/charging');
+  return toApiResponse((payload.data ?? []).map(mapStation), payload.message || 'Charging stations fetched successfully.');
 }
 
-export async function getChargingHistory(): Promise<ApiResponse<ChargingHistoryRecord[]>> {
-  return mockResponse(mockHistory, 'Charging history fetched successfully.');
+export async function getNearbyChargingStations(params: {
+  latitude: number;
+  longitude: number;
+  radiusKm?: number;
+  limit?: number;
+}): Promise<ApiResponse<NearbyChargingStation[]>> {
+  try {
+    const payload = await apiRequest<BackendEnvelope<NearbyChargingStation[]> & { stations?: NearbyChargingStation[] }>(
+      '/api/charging/nearby',
+      {
+        query: {
+          lat: params.latitude,
+          lng: params.longitude,
+          radiusKm: params.radiusKm,
+          limit: params.limit,
+        },
+      },
+    );
+
+    const normalizedStations = (payload.stations ?? payload.data ?? [])
+      .map((station, index) => normalizeNearbyChargingStation(station, index))
+      .filter((station): station is NearbyChargingStation => station !== null)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+
+    console.log('[Charging API] Nearby stations loaded', { count: normalizedStations.length });
+
+    return toApiResponse(normalizedStations, payload.message || 'Nearby charging stations fetched successfully.');
+  } catch (error) {
+    console.error('[Charging API] Nearby stations API error', error);
+    throw error;
+  }
+}
+
+export async function getChargingHistory(token?: string): Promise<ApiResponse<ChargingHistoryRecord[]>> {
+  const payload = await apiRequest<BackendEnvelope<Array<{ _id: string; station: { stationName: string; chargerType: string }; slotsBooked: number; bookingStatus: 'confirmed' | 'cancelled' | 'completed'; createdAt: string }>>>(
+    '/api/charging/bookings',
+    token ? { token } : undefined,
+  );
+
+  return toApiResponse(
+    (payload.data ?? []).map((booking) => ({
+      id: booking._id,
+      stationName: booking.station.stationName,
+      chargingType: booking.station.chargerType as ChargingType,
+      slotAvailability: booking.slotsBooked,
+      chargingStatus: booking.bookingStatus === 'completed' ? 'completed' : 'booked',
+      chargingDurationMinutes: 0,
+      startedAt: booking.createdAt,
+      endedAt: booking.createdAt,
+      energyConsumedKwh: 0,
+    })),
+    payload.message || 'Charging bookings fetched successfully.',
+  );
+}
+
+export async function createChargingStation(body: {
+  stationName: string;
+  location: string;
+  latitude?: number;
+  longitude?: number;
+  chargerType: string;
+  availableSlots: number;
+  pricePerUnit: number;
+  status?: string;
+}): Promise<ApiResponse<ChargingStation>> {
+  const payload = await apiRequest<BackendEnvelope<Parameters<typeof mapStation>[0]>>('/api/charging', {
+    method: 'POST',
+    body,
+  });
+
+  if (!payload.data) throw new Error(payload.message || 'Failed to create charging station.');
+
+  return toApiResponse(mapStation(payload.data), payload.message || 'Charging station created successfully.');
+}
+
+export async function updateChargingStation(
+  id: string,
+  body: Partial<{
+    stationName: string;
+    location: string;
+    latitude: number;
+    longitude: number;
+    chargerType: string;
+    availableSlots: number;
+    pricePerUnit: number;
+    status: string;
+  }>,
+): Promise<ApiResponse<ChargingStation>> {
+  const payload = await apiRequest<BackendEnvelope<Parameters<typeof mapStation>[0]>>(`/api/charging/${id}`, {
+    method: 'PUT',
+    body,
+  });
+
+  if (!payload.data) throw new Error(payload.message || 'Failed to update charging station.');
+
+  return toApiResponse(mapStation(payload.data), payload.message || 'Charging station updated successfully.');
+}
+
+export async function deleteChargingStation(id: string): Promise<ApiResponse<null>> {
+  const payload = await apiRequest<BackendEnvelope<null>>(`/api/charging/${id}`, { method: 'DELETE' });
+  return toApiResponse(null, payload.message || 'Charging station deleted successfully.');
 }
 
 export async function bookChargingSlot(
   request: BookingRequest,
+  token?: string,
 ): Promise<ApiResponse<{ bookingId: string; stationId: string; chargingStatus: ChargingStatus }>> {
-  const station = mockStations.find((item) => item.id === request.stationId);
-
-  if (!station) {
-    return mockResponse(
-      {
-        bookingId: '',
-        stationId: request.stationId,
-        chargingStatus: 'idle',
-      },
-      'Station not found in mock dataset.',
-    );
-  }
-
-  station.slotAvailability = Math.max(station.slotAvailability - 1, 0);
-  station.chargingStatus = 'booked';
-
-  return mockResponse(
+  const payload = await apiRequest<BackendEnvelope<{ booking: { _id: string; slotsBooked: number }; station: { _id: string } }>>(
+    '/api/charging/book-slot',
     {
-      bookingId: `bk-${Date.now()}`,
-      stationId: station.id,
-      chargingStatus: station.chargingStatus,
+      method: 'POST',
+      token,
+      body: {
+        stationId: request.stationId,
+        slotsBooked: request.slotsBooked ?? 1,
+      },
     },
-    'Charging slot booked successfully (mock).',
+  );
+
+  if (!payload.data) throw new Error(payload.message || 'Failed to book charging slot.');
+
+  return toApiResponse(
+    {
+      bookingId: payload.data.booking._id,
+      stationId: payload.data.station._id,
+      chargingStatus: 'booked',
+    },
+    payload.message || 'Charging slot booked successfully.',
   );
 }
 
-export async function startChargingSession(
-  request: ChargingSessionRequest,
-): Promise<ApiResponse<{ sessionId: string; stationId: string; chargingStatus: ChargingStatus }>> {
-  const station = mockStations.find((item) => item.id === request.stationId);
-
-  if (!station) {
-    return mockResponse(
-      {
-        sessionId: '',
-        stationId: request.stationId,
-        chargingStatus: 'idle',
-      },
-      'Station not found in mock dataset.',
-    );
-  }
-
-  const sessionId = `sess-${Date.now()}`;
-  activeSessions.set(sessionId, {
-    sessionId,
-    stationId: station.id,
-    userId: request.userId,
-    startedAt: new Date().toISOString(),
-  });
-
-  station.chargingStatus = 'charging';
-  station.chargingDurationMinutes = 0;
-
-  return mockResponse(
-    {
-      sessionId,
-      stationId: station.id,
-      chargingStatus: station.chargingStatus,
-    },
-    'Charging session started (mock).',
-  );
+export async function startChargingSession(request: ChargingSessionRequest): Promise<ApiResponse<{ sessionId: string; stationId: string; chargingStatus: ChargingStatus }>> {
+  const booking = await bookChargingSlot({ stationId: request.stationId, slotsBooked: 1 });
+  return toApiResponse({ sessionId: booking.data.bookingId, stationId: booking.data.stationId, chargingStatus: 'charging' }, `Charging session started for ${request.userId}.`);
 }
 
-export async function stopChargingSession(
-  request: ChargingSessionStopRequest,
-): Promise<ApiResponse<{ sessionId: string; chargingStatus: ChargingStatus; chargingDurationMinutes: number }>> {
-  const session = activeSessions.get(request.sessionId);
-
-  if (!session) {
-    return mockResponse(
-      {
-        sessionId: request.sessionId,
-        chargingStatus: 'idle',
-        chargingDurationMinutes: 0,
-      },
-      'Session not found in mock dataset.',
-    );
-  }
-
-  const station = mockStations.find((item) => item.id === session.stationId);
-  const startedAtMs = new Date(session.startedAt).getTime();
-  const durationMinutes = Math.max(Math.round((Date.now() - startedAtMs) / 60000), 1);
-
-  if (station) {
-    station.chargingStatus = 'completed';
-    station.chargingDurationMinutes = durationMinutes;
-    station.slotAvailability += 1;
-  }
-
-  activeSessions.delete(request.sessionId);
-
-  return mockResponse(
-    {
-      sessionId: request.sessionId,
-      chargingStatus: station?.chargingStatus ?? 'completed',
-      chargingDurationMinutes: durationMinutes,
-    },
-    'Charging session stopped (mock).',
-  );
+export async function stopChargingSession(request: ChargingSessionStopRequest): Promise<ApiResponse<{ sessionId: string; chargingStatus: ChargingStatus; chargingDurationMinutes: number }>> {
+  return toApiResponse({ sessionId: request.sessionId, chargingStatus: 'completed', chargingDurationMinutes: 0 }, 'Charging session stopped.');
 }

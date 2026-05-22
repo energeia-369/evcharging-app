@@ -1,14 +1,24 @@
 // Main server entrypoint for the MongoDB-backed Express API.
 require('dotenv').config();
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
+const http = require('http');
 const path = require('path');
 
 const { connectDB, closeDB } = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
+const chargingRoutes = require('./routes/chargingRoutes');
+const cafeRoutes = require('./routes/cafeRoutes');
+const fleetRoutes = require('./routes/fleetRoutes');
+const showroomRoutes = require('./routes/showroomRoutes');
+const serviceRoutes = require('./routes/serviceRoutes');
+const gpsRoutes = require('./routes/gpsRoutes');
+const dealershipRoutes = require('./modules/dealership/dealership.routes');
 const apiRoutes = require('./routes');
 const ApiError = require('./utils/ApiError');
 const errorMiddleware = require('./middleware/errorMiddleware');
+const { initializeGpsSocket } = require('./socket/gpsSocket');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -47,6 +57,13 @@ app.get('/health', (req, res) => {
 
 // Mount the versioned API routes after the shared middleware.
 app.use('/api/auth', authRoutes);
+app.use('/api/charging', chargingRoutes);
+app.use('/api/cafe', cafeRoutes);
+app.use('/api/fleet', fleetRoutes);
+app.use('/api/showroom', showroomRoutes);
+app.use('/api/service', serviceRoutes);
+app.use('/api/gps', gpsRoutes);
+app.use('/api/franchise', dealershipRoutes);
 app.use(API_PREFIX, apiRoutes);
 
 // Convert all unmatched requests into a centralized API error.
@@ -61,11 +78,15 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    const server = app.listen(PORT, () => {
+    const httpServer = http.createServer(app);
+    initializeGpsSocket(httpServer, corsOptions);
+
+    const server = httpServer.listen(PORT, () => {
       console.log('\n═══════════════════════════════════════════════════════════');
       console.log('🚀 EV CHARGING BACKEND STARTED SUCCESSFULLY');
       console.log('═══════════════════════════════════════════════════════════');
       console.log(`📌 Server is running on: http://localhost:${PORT}`);
+      console.log(`📌 Socket.IO endpoint: ws://localhost:${PORT}`);
       console.log(`📌 API Prefix: ${API_PREFIX}`);
       console.log(`📌 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`📌 MongoDB URI: ${process.env.MONGODB_URI || 'not configured'}`);

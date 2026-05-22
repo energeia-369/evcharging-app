@@ -1,4 +1,5 @@
-import React, { createContext, ReactNode, useContext, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 type User = {
   fullName?: string;
@@ -33,6 +34,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [credentials, setCredentials] = useState<Credentials | null>(null);
+  const STORAGE_KEY = '@energeia_auth_state';
+
+  useEffect(() => {
+    // load saved auth state on mount
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { user?: User | null; credentials?: Credentials | null; isAuthenticated?: boolean };
+          if (parsed.user) setUser(parsed.user);
+          if (parsed.credentials) setCredentials(parsed.credentials);
+          if (parsed.isAuthenticated) setIsAuthenticated(true);
+        }
+      } catch (e) {
+        // ignore storage errors
+        console.warn('Failed to load auth state', e);
+      }
+    })();
+  }, []);
 
   const login = (email: string, password: string) => {
     return new Promise<boolean>((resolve) => {
@@ -41,6 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (matchesRegistered) {
           setUser({ email });
           setIsAuthenticated(true);
+          // persist
+          AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ user: { email }, credentials, isAuthenticated: true })).catch(() => {});
           resolve(true);
         } else {
           resolve(false);
@@ -54,7 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTimeout(() => {
         setUser({ fullName: data.fullName, email: data.email, phone: data.phone, company: data.company });
         if (data.email && data.password) {
-          setCredentials({ email: data.email, password: data.password });
+          const creds = { email: data.email, password: data.password } as Credentials;
+          setCredentials(creds);
+          // persist registration + login state
+          AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ user: { fullName: data.fullName, email: data.email, phone: data.phone, company: data.company }, credentials: creds, isAuthenticated: true })).catch(() => {});
         }
         setIsAuthenticated(true);
         resolve(true);
@@ -65,6 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
+    setCredentials(null);
+    AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
   };
 
   return (

@@ -1,7 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+import { useAuth } from './fleet-management/AuthContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -111,6 +113,7 @@ const styles = StyleSheet.create({
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { login } = useAuth();
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -124,7 +127,21 @@ export default function LoginScreen() {
     }).start();
   }, [fadeAnim]);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail || !password) {
+      Alert.alert('Login required', 'Please enter your email and password.');
+      return;
+    }
+
+    const isValid = await login(trimmedEmail, password);
+
+    if (!isValid) {
+      Alert.alert('Invalid credentials', 'Register first or enter the correct email and password.');
+      return;
+    }
+
     router.push('/role-selection');
   };
 

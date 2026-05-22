@@ -1,14 +1,16 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Animated,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Animated,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+
+import { useAuth } from './fleet-management/AuthContext';
 
 type RoleType = 'customer' | 'admin' | 'fleet_manager' | 'service_manager' | 'franchise_owner';
 
@@ -60,8 +62,15 @@ const roles: Role[] = [
 
 export default function RoleSelectionScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [selectedRole, setSelectedRole] = useState<RoleType | null>(null);
   const [scaleAnim] = useState(new Animated.Value(1));
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, router]);
 
   const handleRolePress = (roleId: RoleType) => {
     setSelectedRole(roleId);

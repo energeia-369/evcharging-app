@@ -1,188 +1,115 @@
-export type CafeCategory = 'Coffee' | 'Snacks' | 'Desserts' | 'Beverages';
+import { apiRequest, toApiResponse, ApiResponse, BackendEnvelope } from './apiClient';
 
-export interface CafeMenuItem {
-  id: string;
+export interface CafeOrderItem {
   itemName: string;
-  price: number;
-  image: string;
-  category: CafeCategory;
-  rating: number;
-}
-
-export interface CartItem {
-  id: string;
-  itemName: string;
-  price: number;
-  image: string;
-  category: CafeCategory;
-  rating: number;
   quantity: number;
-}
-
-export interface OrderRequest {
-  userId: string;
-  items: Array<{
-    menuItemId: string;
-    quantity: number;
-  }>;
-}
-
-export interface OrderHistoryItem {
-  orderId: string;
-  itemName: string;
   price: number;
-  image: string;
-  category: CafeCategory;
-  rating: number;
-  quantity: number;
-  orderedAt: string;
-  status: 'placed' | 'preparing' | 'completed';
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message: string;
-  timestamp: string;
+export interface CafeOrder {
+  id: string;
+  customerName: string;
+  items: CafeOrderItem[];
+  amount: number;
+  paymentStatus: 'pending' | 'paid' | 'failed';
+  orderStatus: 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
 }
 
-const MOCK_DELAY_MS = 350;
+const mapOrder = (order: {
+  _id: string;
+  customerName: string;
+  items: CafeOrderItem[];
+  amount: number;
+  paymentStatus: 'pending' | 'paid' | 'failed';
+  orderStatus: 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+}): CafeOrder => ({
+  id: order._id,
+  customerName: order.customerName,
+  items: order.items,
+  amount: order.amount,
+  paymentStatus: order.paymentStatus,
+  orderStatus: order.orderStatus,
+  createdAt: order.createdAt,
+  updatedAt: order.updatedAt,
+});
 
-const mockMenu: CafeMenuItem[] = [
-  {
-    id: 'menu-001',
-    itemName: 'Caramel Cold Brew',
-    price: 149,
-    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085',
-    category: 'Coffee',
-    rating: 4.7,
-  },
-  {
-    id: 'menu-002',
-    itemName: 'Paneer Wrap',
-    price: 179,
-    image: 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759',
-    category: 'Snacks',
-    rating: 4.5,
-  },
-  {
-    id: 'menu-003',
-    itemName: 'Blueberry Cheesecake Slice',
-    price: 199,
-    image: 'https://images.unsplash.com/photo-1464305795204-6f5bbfc7fb81',
-    category: 'Desserts',
-    rating: 4.8,
-  },
-  {
-    id: 'menu-004',
-    itemName: 'Fresh Lime Soda',
-    price: 99,
-    image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735',
-    category: 'Beverages',
-    rating: 4.4,
-  },
-];
+export async function getCafeOrders(): Promise<ApiResponse<CafeOrder[]>> {
+  const payload = await apiRequest<BackendEnvelope<Array<Parameters<typeof mapOrder>[0]>>>('/api/cafe');
+  return toApiResponse((payload.data ?? []).map(mapOrder), payload.message || 'Cafe orders fetched successfully.');
+}
 
-const mockCart: CartItem[] = [
-  {
-    id: 'cart-001',
-    itemName: 'Caramel Cold Brew',
-    price: 149,
-    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085',
-    category: 'Coffee',
-    rating: 4.7,
-    quantity: 1,
-  },
-  {
-    id: 'cart-002',
-    itemName: 'Paneer Wrap',
-    price: 179,
-    image: 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759',
-    category: 'Snacks',
-    rating: 4.5,
-    quantity: 2,
-  },
-];
-
-const mockOrderHistory: OrderHistoryItem[] = [
-  {
-    orderId: 'ord-1001',
-    itemName: 'Blueberry Cheesecake Slice',
-    price: 199,
-    image: 'https://images.unsplash.com/photo-1464305795204-6f5bbfc7fb81',
-    category: 'Desserts',
-    rating: 4.8,
-    quantity: 1,
-    orderedAt: '2026-05-12T11:15:00.000Z',
-    status: 'completed',
-  },
-  {
-    orderId: 'ord-1002',
-    itemName: 'Fresh Lime Soda',
-    price: 99,
-    image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735',
-    category: 'Beverages',
-    rating: 4.4,
-    quantity: 2,
-    orderedAt: '2026-05-13T17:40:00.000Z',
-    status: 'completed',
-  },
-];
-
-const wait = async (ms: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, ms);
+export async function createCafeOrder(body: {
+  customerName: string;
+  items: CafeOrderItem[];
+  amount: number;
+  paymentStatus?: 'pending' | 'paid' | 'failed';
+  orderStatus?: 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+}): Promise<ApiResponse<CafeOrder>> {
+  const payload = await apiRequest<BackendEnvelope<Parameters<typeof mapOrder>[0]>>('/api/cafe', {
+    method: 'POST',
+    body,
   });
 
-async function buildResponse<T>(data: T, message: string): Promise<ApiResponse<T>> {
-  await wait(MOCK_DELAY_MS);
-
-  return {
-    success: true,
-    data,
-    message,
-    timestamp: new Date().toISOString(),
-  };
+  if (!payload.data) throw new Error(payload.message || 'Failed to create cafe order.');
+  return toApiResponse(mapOrder(payload.data), payload.message || 'Cafe order created successfully.');
 }
 
-export async function getCafeMenu(): Promise<ApiResponse<CafeMenuItem[]>> {
-  return buildResponse(mockMenu, 'Cafe menu fetched successfully.');
+export async function updateCafeOrder(
+  orderId: string,
+  body: Partial<{
+    customerName: string;
+    items: CafeOrderItem[];
+    amount: number;
+    paymentStatus: 'pending' | 'paid' | 'failed';
+    orderStatus: 'placed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+  }>,
+): Promise<ApiResponse<CafeOrder>> {
+  const payload = await apiRequest<BackendEnvelope<Parameters<typeof mapOrder>[0]>>(`/api/cafe/${orderId}`, {
+    method: 'PUT',
+    body,
+  });
+
+  if (!payload.data) throw new Error(payload.message || 'Failed to update cafe order.');
+  return toApiResponse(mapOrder(payload.data), payload.message || 'Cafe order updated successfully.');
 }
 
-export async function getCartItems(): Promise<ApiResponse<CartItem[]>> {
-  return buildResponse(mockCart, 'Cart items fetched successfully.');
+export async function deleteCafeOrder(orderId: string): Promise<ApiResponse<null>> {
+  const payload = await apiRequest<BackendEnvelope<null>>(`/api/cafe/${orderId}`, { method: 'DELETE' });
+  return toApiResponse(null, payload.message || 'Cafe order deleted successfully.');
 }
 
-export async function placeOrder(
-  request: OrderRequest,
-): Promise<
-  ApiResponse<{
-    orderId: string;
-    userId: string;
-    totalAmount: number;
-    itemCount: number;
-    status: 'placed';
-  }>
-> {
-  const totalAmount = request.items.reduce((sum, item) => {
-    const menuItem = mockMenu.find((menu) => menu.id === item.menuItemId);
-    return sum + (menuItem?.price ?? 0) * item.quantity;
-  }, 0);
+// Compatibility helper for older screens that expected an order history list.
+export async function getOrderHistory(): Promise<ApiResponse<CafeOrder[]>> {
+  return getCafeOrders();
+}
 
-  const itemCount = request.items.reduce((sum, item) => sum + item.quantity, 0);
+export async function getCafeMenu(): Promise<ApiResponse<CafeOrderItem[]>> {
+  const orders = await getCafeOrders();
+  return toApiResponse(orders.data.flatMap((order) => order.items), 'Cafe menu derived from live orders.');
+}
 
-  return buildResponse(
+export async function getCartItems(): Promise<ApiResponse<CafeOrderItem[]>> {
+  return toApiResponse([], 'Cart items are managed locally in the UI.');
+}
+
+export async function placeOrder(body: {
+  customerName: string;
+  items: CafeOrderItem[];
+  amount: number;
+}): Promise<ApiResponse<{ orderId: string; userId: string; totalAmount: number; itemCount: number; status: 'placed' }>> {
+  const created = await createCafeOrder(body);
+  return toApiResponse(
     {
-      orderId: `ord-${Date.now()}`,
-      userId: request.userId,
-      totalAmount,
-      itemCount,
+      orderId: created.data.id,
+      userId: '',
+      totalAmount: created.data.amount,
+      itemCount: created.data.items.reduce((sum, item) => sum + item.quantity, 0),
       status: 'placed',
     },
-    'Order placed successfully (mock).',
+    created.message,
   );
-}
-
-export async function getOrderHistory(): Promise<ApiResponse<OrderHistoryItem[]>> {
-  return buildResponse(mockOrderHistory, 'Order history fetched successfully.');
 }
