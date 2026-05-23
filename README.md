@@ -30,6 +30,16 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 This project is configured to open in a development build, not Expo Go.
 
+## Connect the App to Render
+
+The app already reads `EXPO_PUBLIC_API_BASE_URL` from the Expo environment. To point the mobile app at your Render backend:
+
+1. Copy [.env.example](.env.example) to a local `.env` file.
+2. Replace the placeholder URL with your Render backend URL, for example `https://energeia-backend.onrender.com`.
+3. Rebuild or restart Expo so the new environment value is picked up.
+
+All API calls from `services/apiClient.ts` will then use that base URL instead of the local development server.
+
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
 ## Get a fresh project
