@@ -1,9 +1,6 @@
-import { apiRequest, toApiResponse, ApiResponse, BackendEnvelope } from './apiClient';
-import { getChargingStations, getChargingHistory } from './chargingApi';
-import { getFleetVehicles } from './fleetApi';
-import { getCafeOrders } from './cafeApi';
+import { apiRequest, ApiResponse, BackendEnvelope, toApiResponse } from './apiClient';
+import { getChargingHistory } from './chargingApi';
 import { getServices } from './serviceApi';
-import { getCars } from './showroomApi';
 
 export interface DashboardStats {
   totalUsers: number;
@@ -48,26 +45,44 @@ export interface RevenueAnalytics {
   transactionCount: number;
 }
 
-export async function getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
-  const [chargingStations, fleetVehicles, cafeOrders, showroomVehicles] = await Promise.all([
-    getChargingStations(),
-    getFleetVehicles(),
-    getCafeOrders(),
-    getCars(),
+export async function getDashboardStats(token?: string): Promise<ApiResponse<DashboardStats>> {
+  if (token) {
+    const payload = await apiRequest<BackendEnvelope<{
+      totalUsers: number;
+      chargingSessions: number;
+      revenue: number;
+      activeFleets: number;
+      totalDrivers?: number;
+    }>>('/api/admin/dashboard', { token });
+
+    return toApiResponse(
+      {
+        totalUsers: payload.data?.totalUsers || 0,
+        chargingSessions: payload.data?.chargingSessions || 0,
+        totalRevenue: payload.data?.revenue || 0,
+        activeFleets: payload.data?.activeFleets || 0,
+        cafeOrders: payload.data?.totalDrivers || 0,
+        lastUpdatedAt: new Date().toISOString(),
+      },
+      payload.message || 'Dashboard statistics fetched successfully.',
+    );
+  }
+
+  const [chargingHistory, serviceRequests] = await Promise.all([
+    getChargingHistory().catch(() => toApiResponse([], '')),
+    getServices().catch(() => toApiResponse([], '')),
   ]);
 
   return toApiResponse(
     {
       totalUsers: 0,
-      chargingSessions: chargingStations.data.length,
-      totalRevenue:
-        cafeOrders.data.reduce((sum, order) => sum + order.amount, 0) +
-        showroomVehicles.data.reduce((sum, vehicle) => sum + vehicle.price, 0),
-      activeFleets: fleetVehicles.data.length,
-      cafeOrders: cafeOrders.data.length,
+      chargingSessions: chargingHistory.data.length,
+      totalRevenue: 0,
+      activeFleets: 0,
+      cafeOrders: serviceRequests.data.length,
       lastUpdatedAt: new Date().toISOString(),
     },
-    'Dashboard statistics fetched successfully.',
+    'Dashboard statistics fetched with public fallback mode.',
   );
 }
 

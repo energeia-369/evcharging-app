@@ -4,7 +4,7 @@ import React, { useEffect, useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FleetCard, SectionHeader } from '../../components/fleet/Shared'
-import { analyticsData, drivers, trips, vehicles } from '../../lib/mock/fleetData'
+import { analyticsData, trips } from '../../lib/mock/fleetData'
 import { useAuth } from './AuthContext'
 import { useFleetOps } from './FleetOpsContext'
 
@@ -17,7 +17,7 @@ type QuickAction = {
 export default function FleetDashboard() {
   const router = useRouter()
   const { isAuthenticated, logout, user } = useAuth()
-  const { currentDriver, currentVehicle, resetOperations } = useFleetOps()
+  const { currentDriver, currentVehicle, dashboardMetrics, resetOperations } = useFleetOps()
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -26,17 +26,19 @@ export default function FleetDashboard() {
   }, [isAuthenticated, router])
 
   const summary = useMemo(() => {
-    const activeVehicles = vehicles.filter(vehicle => vehicle.status !== 'maintenance').length
-    const activeTrips = vehicles.filter(vehicle => vehicle.status === 'in-trip').length
+    const activeTrips = dashboardMetrics.vehicleDriverMapping.filter(item => item.drivers.length > 0).length
     return {
-      activeVehicles,
-      totalDrivers: drivers.length,
+      totalVehicles: dashboardMetrics.totalVehicles,
+      totalDrivers: dashboardMetrics.totalDrivers,
+      activeDrivers: dashboardMetrics.activeDrivers,
+      assignedDrivers: dashboardMetrics.assignedDrivers,
+      pendingKyc: dashboardMetrics.pendingKyc,
       activeTrips,
       earnings: analyticsData.totalCostThisMonth,
       batteryHealth: analyticsData.averageBatteryHealth,
       fleetScore: analyticsData.vehicleHealthScore,
     }
-  }, [])
+  }, [dashboardMetrics])
 
   const quickActions: QuickAction[] = [
     { label: 'Vehicles & Drivers', icon: 'truck', route: '/fleet-management/vehicles' },
@@ -89,23 +91,46 @@ export default function FleetDashboard() {
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <MaterialCommunityIcons name={'truck' as any} size={20} color="#10b981" />
-            <Text style={styles.statLabel}>Active Vehicles</Text>
-            <Text style={styles.statValue}>{summary.activeVehicles}</Text>
+            <Text style={styles.statLabel}>Total Vehicles</Text>
+            <Text style={styles.statValue}>{summary.totalVehicles}</Text>
           </View>
           <View style={styles.statCard}>
             <MaterialCommunityIcons name={'account-tie' as any} size={20} color="#10b981" />
-            <Text style={styles.statLabel}>Drivers</Text>
+            <Text style={styles.statLabel}>Total Drivers</Text>
             <Text style={styles.statValue}>{summary.totalDrivers}</Text>
           </View>
           <View style={styles.statCard}>
             <MaterialCommunityIcons name={'map-marker' as any} size={20} color="#10b981" />
-            <Text style={styles.statLabel}>Active Trips</Text>
+            <Text style={styles.statLabel}>Active Drivers</Text>
+            <Text style={styles.statValue}>{summary.activeDrivers}</Text>
+          </View>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name={'cash' as any} size={20} color="#10b981" />
+            <Text style={styles.statLabel}>Assigned Drivers</Text>
+            <Text style={styles.statValue}>{summary.assignedDrivers}</Text>
+          </View>
+        </View>
+
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name={'clipboard-check' as any} size={20} color="#10b981" />
+            <Text style={styles.statLabel}>Pending KYC</Text>
+            <Text style={styles.statValue}>{summary.pendingKyc}</Text>
+          </View>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name={'qrcode-scan' as any} size={20} color="#10b981" />
+            <Text style={styles.statLabel}>Mapped Vehicles</Text>
             <Text style={styles.statValue}>{summary.activeTrips}</Text>
           </View>
           <View style={styles.statCard}>
             <MaterialCommunityIcons name={'cash' as any} size={20} color="#10b981" />
             <Text style={styles.statLabel}>Fleet Earnings</Text>
             <Text style={styles.statValue}>₹{summary.earnings.toLocaleString('en-IN')}</Text>
+          </View>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name={'battery-charging' as any} size={20} color="#10b981" />
+            <Text style={styles.statLabel}>Battery Health</Text>
+            <Text style={styles.statValue}>{summary.batteryHealth}%</Text>
           </View>
         </View>
 
@@ -154,6 +179,16 @@ export default function FleetDashboard() {
             <Text style={styles.snapshotText}>Performance score stays aligned with vehicle health and utilization.</Text>
           </View>
         </FleetCard>
+
+        <SectionHeader title="Vehicle Driver Mapping" subtitle="One vehicle can host multiple drivers with independent shifts and KYC." />
+        <FleetCard style={styles.snapshotCard}>
+          {dashboardMetrics.vehicleDriverMapping.map(item => (
+            <View key={item.vehicleId} style={styles.mappingRow}>
+              <Text style={styles.mappingVehicle}>{item.vehicleNumber}</Text>
+              <Text style={styles.mappingDrivers}>{item.drivers.length > 0 ? item.drivers.join(', ') : 'No drivers assigned'}</Text>
+            </View>
+          ))}
+        </FleetCard>
       </ScrollView>
     </SafeAreaView>
   )
@@ -194,4 +229,7 @@ const styles = StyleSheet.create({
   snapshotCard: { marginBottom: 16 },
   snapshotRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 10 },
   snapshotText: { flex: 1, color: '#4f6952', fontSize: 12, lineHeight: 18 },
+  mappingRow: { borderBottomWidth: 1, borderBottomColor: '#e2efe5', paddingBottom: 8, marginBottom: 8 },
+  mappingVehicle: { color: '#0f5132', fontSize: 12, fontWeight: '900' },
+  mappingDrivers: { color: '#4f6952', fontSize: 12, marginTop: 4, lineHeight: 18 },
 })

@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { authError, login } = useAuth();
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -138,10 +138,11 @@ export default function LoginScreen() {
     const isValid = await login(trimmedEmail, password);
 
     if (!isValid) {
-      Alert.alert('Invalid credentials', 'Register first or enter the correct email and password.');
+      Alert.alert('Login failed', authError || 'Invalid credentials');
       return;
     }
 
+    Alert.alert('Login successful', 'Welcome back.');
     router.push('/role-selection');
   };
 

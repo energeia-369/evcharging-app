@@ -16,7 +16,7 @@ import { useAuth } from './fleet-management/AuthContext';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register } = useAuth();
+  const { authError, register } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -73,10 +73,11 @@ export default function RegisterScreen() {
     });
 
     if (!registered) {
-      Alert.alert('Registration failed', 'Please try again.');
+      Alert.alert('Registration failed', authError || 'Please try again.');
       return;
     }
 
+    Alert.alert('Registration successful', 'Your account has been created successfully.');
     router.push('/role-selection');
   }
 

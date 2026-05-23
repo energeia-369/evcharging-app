@@ -1,44 +1,117 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FleetCard, SectionHeader } from '../../components/fleet/Shared'
 import { UploadCard, type SelectedFile } from '../../components/fleet/UploadCard'
+import { useFleetOps } from './FleetOpsContext'
 
 export default function VehicleKycScreen() {
   const router = useRouter()
+  const { completeVehicleKyc, fleetVehicles, registerVehicle, selectedVehicleForKycId, setSelectedVehicleForKycId } = useFleetOps()
+  const selectedVehicle = fleetVehicles.find((vehicle) => vehicle.id === selectedVehicleForKycId) ?? null
+
+  const [vehicleNumber, setVehicleNumber] = useState(selectedVehicle?.number ?? '')
+  const [vehicleModel, setVehicleModel] = useState(selectedVehicle?.model ?? '')
+  const [vehicleLocation, setVehicleLocation] = useState(selectedVehicle?.location ?? '')
+  const [vehicleLabel, setVehicleLabel] = useState(selectedVehicle?.imageLabel ?? '')
+
   const [rcBookFile, setRcBookFile] = useState<SelectedFile | null>(null)
   const [insuranceFile, setInsuranceFile] = useState<SelectedFile | null>(null)
+  const [pollutionFile, setPollutionFile] = useState<SelectedFile | null>(null)
   const [vehicleImageFile, setVehicleImageFile] = useState<SelectedFile | null>(null)
   const [completedUploads, setCompletedUploads] = useState<string[]>([])
-  const [uploadedFiles, setUploadedFiles] = useState<SelectedFile[]>([])
   const [selectedDocuments, setSelectedDocuments] = useState<Record<string, SelectedFile | null>>({
     rcBook: null,
     insurance: null,
+    pollutionCertificate: null,
     vehicleImage: null,
   })
   const [uploadProgress, setUploadProgress] = useState(0)
   const [showValidation, setShowValidation] = useState(false)
+  const [validationMessage, setValidationMessage] = useState('')
+
+  useEffect(() => {
+    if (!selectedVehicle) {
+      return
+    }
+
+    setVehicleNumber(selectedVehicle.number)
+    setVehicleModel(selectedVehicle.model)
+    setVehicleLocation(selectedVehicle.location)
+    setVehicleLabel(selectedVehicle.imageLabel)
+  }, [selectedVehicle])
 
   useEffect(() => {
     const nextSelectedDocuments = {
       rcBook: rcBookFile,
       insurance: insuranceFile,
+      pollutionCertificate: pollutionFile,
       vehicleImage: vehicleImageFile,
     }
 
-    const nextUploadedFiles = [rcBookFile, insuranceFile, vehicleImageFile].filter((file): file is SelectedFile => Boolean(file))
+    const nextUploadedFiles = [rcBookFile, insuranceFile, pollutionFile, vehicleImageFile].filter((file): file is SelectedFile => Boolean(file))
 
     setSelectedDocuments(nextSelectedDocuments)
-    setUploadedFiles(nextUploadedFiles)
     setCompletedUploads(nextUploadedFiles.map(file => file.name))
-    setUploadProgress(Math.round((nextUploadedFiles.length / 3) * 100))
-  }, [insuranceFile, rcBookFile, vehicleImageFile])
+    setUploadProgress(Math.round((nextUploadedFiles.length / 4) * 100))
+  }, [insuranceFile, pollutionFile, rcBookFile, vehicleImageFile])
 
   const requiredUploadsReady = Object.values(selectedDocuments).every(Boolean)
   const completedUploadCount = completedUploads?.length ?? 0
   const uploadTotalCount = Object.keys(selectedDocuments).length
+
+  function handleContinue() {
+    setValidationMessage('')
+
+    if (!vehicleNumber.trim() || !vehicleModel.trim()) {
+      setShowValidation(true)
+      setValidationMessage('Vehicle number and model are required.')
+      return
+    }
+
+    if (!requiredUploadsReady) {
+      setShowValidation(true)
+      setValidationMessage('Please upload all required vehicle documents to continue.')
+      return
+    }
+
+    let targetVehicleId = selectedVehicle?.id
+
+    if (!targetVehicleId) {
+      const registerResult = registerVehicle({
+        vehicleNumber,
+        model: vehicleModel,
+        location: vehicleLocation,
+        imageLabel: vehicleLabel,
+      })
+
+      if (!registerResult.ok || !registerResult.vehicleId) {
+        setShowValidation(true)
+        setValidationMessage(registerResult.message)
+        return
+      }
+
+      targetVehicleId = registerResult.vehicleId
+      setSelectedVehicleForKycId(registerResult.vehicleId)
+    }
+
+    const kycResult = completeVehicleKyc(targetVehicleId, {
+      rcBook: rcBookFile?.name ?? '',
+      insurance: insuranceFile?.name ?? '',
+      pollutionCertificate: pollutionFile?.name ?? '',
+      vehicleImage: vehicleImageFile?.name ?? '',
+    })
+
+    if (!kycResult.ok) {
+      setShowValidation(true)
+      setValidationMessage(kycResult.message)
+      return
+    }
+
+    router.push('/fleet-management/driver-management')
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -71,18 +144,39 @@ export default function VehicleKycScreen() {
           </View>
         </FleetCard>
 
-        <SectionHeader title="Required Documents" subtitle="Upload the vehicle ownership papers before moving to driver KYC." />
+        <SectionHeader title="Vehicle Registration" subtitle="Register the vehicle before submitting KYC." />
+        <FleetCard style={styles.noteCard}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Vehicle Number</Text>
+            <TextInput value={vehicleNumber} onChangeText={setVehicleNumber} style={styles.input} placeholder="MH-01-EV-1001" placeholderTextColor="#9ca3af" autoCapitalize="characters" />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Vehicle Model</Text>
+            <TextInput value={vehicleModel} onChangeText={setVehicleModel} style={styles.input} placeholder="Tata Nexon EV" placeholderTextColor="#9ca3af" />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Operating Location</Text>
+            <TextInput value={vehicleLocation} onChangeText={setVehicleLocation} style={styles.input} placeholder="City hub" placeholderTextColor="#9ca3af" />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Vehicle Image Label</Text>
+            <TextInput value={vehicleLabel} onChangeText={setVehicleLabel} style={styles.input} placeholder="Premium EV fleet vehicle" placeholderTextColor="#9ca3af" />
+          </View>
+        </FleetCard>
+
+        <SectionHeader title="Required Documents" subtitle="Upload RC, insurance, pollution certificate, and vehicle image." />
         <View style={styles.uploadList}>
           <UploadCard label="RC Book" file={rcBookFile} onFileSelected={setRcBookFile} required showValidation={showValidation} warningText="RC Book is required for vehicle approval." description="Upload the registration certificate for this vehicle." />
           <UploadCard label="Insurance Document" file={insuranceFile} onFileSelected={setInsuranceFile} required showValidation={showValidation} warningText="Insurance document is required for vehicle approval." description="Attach the current insurance proof for the EV." />
+          <UploadCard label="Pollution Certificate" file={pollutionFile} onFileSelected={setPollutionFile} required showValidation={showValidation} warningText="Pollution certificate is required for vehicle approval." description="Upload the latest pollution compliance certificate." />
           <UploadCard label="Vehicle Image" file={vehicleImageFile} onFileSelected={setVehicleImageFile} required showValidation={showValidation} warningText="Vehicle image is required for vehicle approval." description="Use a clear front or side image of the vehicle." />
         </View>
 
-        {showValidation && !requiredUploadsReady ? (
+        {showValidation && (!requiredUploadsReady || !vehicleNumber.trim() || !vehicleModel.trim()) ? (
           <View style={styles.noteCard}>
             <View style={styles.noteRow}>
               <MaterialCommunityIcons name="file-document" size={18} color="#b91c1c" />
-              <Text style={styles.noteText}>Please upload all required vehicle documents to continue.</Text>
+              <Text style={styles.noteText}>{validationMessage || 'Please complete all vehicle registration details and uploads.'}</Text>
             </View>
           </View>
         ) : null}
@@ -98,17 +192,8 @@ export default function VehicleKycScreen() {
           </View>
         </FleetCard>
 
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => {
-            if (!requiredUploadsReady) {
-              setShowValidation(true)
-              return
-            }
-            router.push('/fleet-management/driver-kyc')
-          }}
-        >
-          <Text style={styles.primaryButtonText}>Continue to Driver KYC</Text>
+        <Pressable style={styles.primaryButton} onPress={handleContinue}>
+          <Text style={styles.primaryButtonText}>Save Vehicle KYC and Add Drivers</Text>
           <MaterialCommunityIcons name="arrow-right" size={18} color="#ffffff" />
         </Pressable>
       </ScrollView>
@@ -134,6 +219,9 @@ const styles = StyleSheet.create({
   progressFill: { height: '100%', backgroundColor: '#10b981' },
   uploadList: { gap: 12, marginBottom: 16 },
   noteCard: { marginBottom: 16 },
+  inputGroup: { marginBottom: 10 },
+  inputLabel: { fontSize: 12, color: '#0f5132', fontWeight: '700', marginBottom: 6 },
+  input: { borderWidth: 1, borderColor: '#dbe7dd', borderRadius: 12, backgroundColor: '#fbfdfb', color: '#0f172a', paddingHorizontal: 12, paddingVertical: 10, fontSize: 13 },
   noteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
   noteText: { flex: 1, fontSize: 12, color: '#0f5132', lineHeight: 17 },
   primaryButton: { backgroundColor: '#10b981', borderRadius: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },

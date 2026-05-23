@@ -1,16 +1,17 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import React, { useState } from 'react'
+import React from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FleetCard, SectionHeader } from '../../components/fleet/Shared'
-import { useFleetContext } from '../../context/fleet-context'
 import { getVehicleStatusColor } from '../../lib/mock/fleetData'
+import { useFleetOps } from './FleetOpsContext'
 
 export default function VehicleDetailsScreen() {
   const router = useRouter()
-  const { selectedVehicle } = useFleetContext()
-  const [showDriverAssignModal, setShowDriverAssignModal] = useState(false)
+  const { currentVehicle, getVehicleDrivers, setSelectedDriverForKycId } = useFleetOps()
+  const selectedVehicle = currentVehicle
+  const assignedDrivers = getVehicleDrivers(selectedVehicle.id)
 
   if (!selectedVehicle) {
     return (
@@ -103,16 +104,29 @@ export default function VehicleDetailsScreen() {
         {/* Driver Information */}
         <FleetCard>
           <SectionHeader title="Driver Assignment" />
-          <View style={styles.driverInfoContainer}>
-            <View style={styles.driverAvatar}>
-              <MaterialCommunityIcons name="account-tie" size={50} color="#10b981" />
+          {assignedDrivers.length === 0 ? <Text style={styles.driverEmail}>No assigned drivers for this vehicle.</Text> : null}
+          {assignedDrivers.map(driver => (
+            <View key={driver.id} style={styles.driverInfoContainer}>
+              <View style={styles.driverAvatar}>
+                <MaterialCommunityIcons name="account-tie" size={50} color="#10b981" />
+              </View>
+              <View style={styles.driverDetails}>
+                <Text style={styles.driverName}>{driver.name}</Text>
+                <Text style={styles.driverEmail}>Contact: +91 {driver.mobileNumber}</Text>
+                <Text style={styles.driverStatus}>KYC: {driver.kycStatus} • Verification: {driver.verificationStatus}</Text>
+                <Text style={styles.driverEmail}>Shift: {driver.shift ?? 'Not assigned'} • {driver.shiftDuration ?? 'Not set'}</Text>
+                <Pressable
+                  style={styles.kycLinkButton}
+                  onPress={() => {
+                    setSelectedDriverForKycId(driver.id)
+                    router.push('/fleet-management/driver-kyc')
+                  }}
+                >
+                  <Text style={styles.kycLinkText}>Open Driver KYC</Text>
+                </Pressable>
+              </View>
             </View>
-            <View style={styles.driverDetails}>
-              <Text style={styles.driverName}>{selectedVehicle.driverName}</Text>
-              <Text style={styles.driverEmail}>Contact via app</Text>
-              <Text style={styles.driverStatus}>Assigned and active</Text>
-            </View>
-          </View>
+          ))}
         </FleetCard>
 
         {/* Maintenance Status */}
@@ -162,7 +176,7 @@ export default function VehicleDetailsScreen() {
             <Text style={[styles.actionButtonText, styles.actionButtonSecondaryText]}>Track Vehicle</Text>
           </Pressable>
 
-          <Pressable style={[styles.actionButtonLarge, styles.actionButtonSecondary]} onPress={() => setShowDriverAssignModal(true)}>
+          <Pressable style={[styles.actionButtonLarge, styles.actionButtonSecondary]} onPress={() => router.push('/fleet-management/vehicles')}>
             <MaterialCommunityIcons name="account-tie" size={20} color="#10b981" />
             <Text style={[styles.actionButtonText, styles.actionButtonSecondaryText]}>Assign Driver</Text>
           </Pressable>
@@ -219,6 +233,8 @@ const styles = StyleSheet.create({
   driverName: { fontSize: 14, fontWeight: '900', color: '#0f5132' },
   driverEmail: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   driverStatus: { fontSize: 11, color: '#10b981', fontWeight: '600', marginTop: 4 },
+  kycLinkButton: { marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#edf9f1', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
+  kycLinkText: { fontSize: 11, fontWeight: '800', color: '#0f5132' },
   maintenanceStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   maintenanceIcon: { width: 50, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   maintenanceLabel: { fontSize: 12, fontWeight: '600', color: '#0f5132' },

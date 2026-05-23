@@ -3,18 +3,21 @@ import { useRouter } from 'expo-router'
 import React, { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { drivers, vehicles } from '../../lib/mock/fleetData'
 import { useFleetOps } from './FleetOpsContext'
 
 export default function AssignVehicleScreen() {
   const router = useRouter()
-  const { bookingDraft, assignment, setAssignment, currentVehicle, currentDriver, startTrip } = useFleetOps()
-  const availableVehicles = useMemo(() => vehicles.filter(vehicle => vehicle.status !== 'maintenance'), [])
-  const availableDrivers = useMemo(() => drivers.filter(driver => driver.availability !== 'off-duty'), [])
+  const { bookingDraft, assignment, currentDriver, currentVehicle, fleetDrivers, fleetVehicles, setAssignment, startTrip } = useFleetOps()
+  const availableVehicles = useMemo(() => fleetVehicles.filter(vehicle => vehicle.status !== 'maintenance'), [fleetVehicles])
+  const availableDrivers = useMemo(() => fleetDrivers.filter(driver => driver.availability !== 'off-duty'), [fleetDrivers])
   const recommendedVehicle = useMemo(() => [...availableVehicles].sort((left, right) => right.battery - left.battery)[0] ?? currentVehicle, [availableVehicles, currentVehicle])
   const recommendedDriver = useMemo(() => [...availableDrivers].sort((left, right) => right.rating - left.rating)[0] ?? currentDriver, [availableDrivers, currentDriver])
   const [selectedVehicleId, setSelectedVehicleId] = useState(assignment.vehicleId)
   const [selectedDriverId, setSelectedDriverId] = useState(assignment.driverId)
+  const selectableDrivers = useMemo(
+    () => availableDrivers.filter(driver => !driver.vehicleId || driver.vehicleId === selectedVehicleId),
+    [availableDrivers, selectedVehicleId],
+  )
 
   function handleAssignNow() {
     setAssignment({ vehicleId: selectedVehicleId, driverId: selectedDriverId })
@@ -104,7 +107,7 @@ export default function AssignVehicleScreen() {
         })}
 
         <Text style={styles.sectionTitle}>Available Drivers</Text>
-        {availableDrivers.map(driver => {
+        {selectableDrivers.map(driver => {
           const isSelected = driver.id === selectedDriverId
           return (
             <Pressable key={driver.id} style={[styles.optionCard, isSelected && styles.optionCardSelected]} onPress={() => setSelectedDriverId(driver.id)}>
@@ -122,11 +125,11 @@ export default function AssignVehicleScreen() {
               </View>
               <View style={styles.optionDetailRow}>
                 <MaterialCommunityIcons name={'shield-check' as any} size={16} color="#10b981" />
-                <Text style={styles.optionDetailText}>Shift: {driver.availability.replace('-', ' ')}</Text>
+                <Text style={styles.optionDetailText}>Shift: {driver.shift ?? driver.availability.replace('-', ' ')}</Text>
               </View>
               <View style={styles.optionDetailRow}>
                 <MaterialCommunityIcons name={'clock-outline' as any} size={16} color="#10b981" />
-                <Text style={styles.optionDetailText}>Assigned vehicle: {driver.assignedVehicleId ?? 'None'}</Text>
+                <Text style={styles.optionDetailText}>Assigned vehicle: {driver.vehicleId ?? 'None'}</Text>
               </View>
             </Pressable>
           )

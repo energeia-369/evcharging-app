@@ -1,24 +1,35 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from './AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { authError, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
+    if (!email.trim() || !password) {
+      Alert.alert('Missing fields', 'Please enter your email and password.');
+      return;
+    }
+
     setLoading(true);
     const ok = await login(email.trim(), password);
     setLoading(false);
-    if (ok) router.push('/fleet-management/dashboard');
-    else alert('Invalid credentials (mock)');
+
+    if (ok) {
+      Alert.alert('Login successful', 'Welcome back.');
+      router.push('/fleet-management/dashboard');
+      return;
+    }
+
+    Alert.alert('Login failed', authError || 'Invalid credentials');
   }
 
   return (

@@ -1,21 +1,24 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { getAuthProfile, loginAuth, registerAuth } from '../../services/authApi';
 
 type User = {
+  id?: string;
   fullName?: string;
+  name?: string;
   email?: string;
   phone?: string;
+  mobile?: string;
   company?: string;
-};
-
-type Credentials = {
-  email: string;
-  password: string;
+  role?: string;
+  profileImage?: string | null;
 };
 
 type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
+  token: string | null;
+  authError: string | null;
   login: (email: string, password: string, remember?: boolean) => Promise<boolean>;
   register: (data: User & { password?: string }) => Promise<boolean>;
   logout: () => void;
@@ -33,8 +36,16 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [credentials, setCredentials] = useState<Credentials | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const STORAGE_KEY = '@energeia_auth_state';
+
+  const extractErrorMessage = (error: unknown): string => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return 'Something went wrong. Please try again.';
+  };
 
   useEffect(() => {
     // load saved auth state on mount
@@ -42,60 +53,121 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw) {
-          const parsed = JSON.parse(raw) as { user?: User | null; credentials?: Credentials | null; isAuthenticated?: boolean };
+          const parsed = JSON.parse(raw) as { user?: User | null; token?: string | null; isAuthenticated?: boolean };
           if (parsed.user) setUser(parsed.user);
-          if (parsed.credentials) setCredentials(parsed.credentials);
-          if (parsed.isAuthenticated) setIsAuthenticated(true);
+          if (parsed.token) {
+            setToken(parsed.token);
+            const profile = await getAuthProfile(parsed.token);
+            setUser({
+              id: profile.data.id,
+              fullName: profile.data.fullName,
+              name: profile.data.name,
+              email: profile.data.email,
+              mobile: profile.data.mobile,
+              role: profile.data.role,
+              profileImage: profile.data.profileImage,
+            });
+            setIsAuthenticated(true);
+          } else if (parsed.isAuthenticated) {
+            setIsAuthenticated(true);
+          }
         }
       } catch (e) {
         // ignore storage errors
         console.warn('Failed to load auth state', e);
+        setUser(null);
+        setToken(null);
+        setIsAuthenticated(false);
+        AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
       }
     })();
   }, []);
 
-  const login = (email: string, password: string) => {
-    return new Promise<boolean>((resolve) => {
-      setTimeout(() => {
-        const matchesRegistered = credentials ? credentials.email === email && credentials.password === password : false;
-        if (matchesRegistered) {
-          setUser({ email });
-          setIsAuthenticated(true);
-          // persist
-          AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ user: { email }, credentials, isAuthenticated: true })).catch(() => {});
-          resolve(true);
-        } else {
-          resolve(false);
-        }
-      }, 700);
-    });
+  const login = async (email: string, password: string) => {
+    try {
+      setAuthError(null);
+      const loginResult = await loginAuth({ email, password });
+      setToken(loginResult.data.token);
+      setUser({
+        id: loginResult.data.user.id,
+        fullName: loginResult.data.user.fullName,
+        name: loginResult.data.user.name,
+        email: loginResult.data.user.email,
+        mobile: loginResult.data.user.mobile,
+        role: loginResult.data.user.role,
+        profileImage: loginResult.data.user.profileImage,
+      });
+      setIsAuthenticated(true);
+
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          user: loginResult.data.user,
+          token: loginResult.data.token,
+          isAuthenticated: true,
+        })
+      );
+      return true;
+    } catch (error) {
+      setAuthError(extractErrorMessage(error));
+      return false;
+    }
   };
 
-  const register = (data: User & { password?: string }) => {
-    return new Promise<boolean>((resolve) => {
-      setTimeout(() => {
-        setUser({ fullName: data.fullName, email: data.email, phone: data.phone, company: data.company });
-        if (data.email && data.password) {
-          const creds = { email: data.email, password: data.password } as Credentials;
-          setCredentials(creds);
-          // persist registration + login state
-          AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ user: { fullName: data.fullName, email: data.email, phone: data.phone, company: data.company }, credentials: creds, isAuthenticated: true })).catch(() => {});
-        }
-        setIsAuthenticated(true);
-        resolve(true);
-      }, 900);
-    });
+  const register = async (data: User & { password?: string }) => {
+    try {
+      setAuthError(null);
+      if (!data.fullName || !data.email || !data.password) {
+        setAuthError('Full name, email, and password are required.');
+        return false;
+      }
+
+      const registerResult = await registerAuth({
+        fullName: data.fullName,
+        email: data.email,
+        mobile: data.phone || data.mobile || '',
+        password: data.password,
+        role: 'fleet_manager',
+      });
+
+      setToken(registerResult.data.token);
+      setUser({
+        id: registerResult.data.user.id,
+        fullName: registerResult.data.user.fullName,
+        name: registerResult.data.user.name,
+        email: registerResult.data.user.email,
+        mobile: registerResult.data.user.mobile,
+        role: registerResult.data.user.role,
+        profileImage: registerResult.data.user.profileImage,
+        company: data.company,
+      });
+      setIsAuthenticated(true);
+
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          user: registerResult.data.user,
+          token: registerResult.data.token,
+          isAuthenticated: true,
+        })
+      );
+      return true;
+    } catch (error) {
+      setAuthError(extractErrorMessage(error));
+      return false;
+    }
   };
 
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    setCredentials(null);
+    setToken(null);
+    setAuthError(null);
     AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, register, logout, setUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, token, authError, login, register, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );

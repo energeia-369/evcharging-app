@@ -1,16 +1,17 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { DriverCard, SectionHeader } from '../../components/fleet/Shared'
-import { drivers } from '../../lib/mock/fleetData'
+import { useFleetOps } from './FleetOpsContext'
 
 export default function DriverManagementScreen() {
   const router = useRouter()
+  const { fleetDrivers, removeDriver, setSelectedDriverForKycId } = useFleetOps()
   const [searchQuery, setSearchQuery] = useState('')
 
-  const filteredDrivers = drivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.email.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredDrivers = fleetDrivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.email.toLowerCase().includes(searchQuery.toLowerCase()))
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -21,7 +22,7 @@ export default function DriverManagementScreen() {
             <MaterialCommunityIcons name="file-document" size={24} color="#1f2937" />
           </Pressable>
           <Text style={styles.headerTitle}>Drivers</Text>
-          <Pressable style={styles.addButton}>
+          <Pressable style={styles.addButton} onPress={() => router.push('/fleet-management/vehicles')}>
             <MaterialCommunityIcons name="plus" size={24} color="#10b981" />
           </Pressable>
         </View>
@@ -42,7 +43,31 @@ export default function DriverManagementScreen() {
         <SectionHeader title={`All Drivers (${filteredDrivers.length})`} />
         <View style={styles.driversList}>
           {filteredDrivers.map(driver => (
-            <DriverCard key={driver.id} driver={driver} />
+            <View key={driver.id}>
+              <DriverCard
+                driver={driver}
+                onPress={() => {
+                  setSelectedDriverForKycId(driver.id)
+                  router.push('/fleet-management/driver-kyc')
+                }}
+              />
+              <View style={styles.driverMetaRow}>
+                <Text style={styles.driverMeta}>KYC: {driver.kycStatus} • Shift: {driver.shift ?? 'Not assigned'} • Vehicle: {driver.vehicleId ?? 'Unassigned'}</Text>
+                <Pressable
+                  style={styles.removeButton}
+                  onPress={() => {
+                    const result = removeDriver(driver.id)
+                    if (!result.ok) {
+                      Alert.alert('Error', result.message)
+                      return
+                    }
+                    Alert.alert('Updated', result.message)
+                  }}
+                >
+                  <Text style={styles.removeText}>Remove</Text>
+                </Pressable>
+              </View>
+            </View>
           ))}
         </View>
       </ScrollView>
@@ -61,4 +86,8 @@ const styles = StyleSheet.create({
   searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, paddingVertical: 12, fontSize: 14, color: '#0f5132' },
   driversList: { gap: 0 },
+  driverMetaRow: { marginTop: -4, marginBottom: 12, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  driverMeta: { flex: 1, color: '#4f6952', fontSize: 11 },
+  removeButton: { backgroundColor: '#dc2626', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  removeText: { color: '#ffffff', fontSize: 10, fontWeight: '900' },
 })

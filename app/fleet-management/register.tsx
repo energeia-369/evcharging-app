@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useMemo, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FleetCard, SectionHeader } from '../../components/fleet/Shared'
 import { UploadCard, type SelectedFile } from '../../components/fleet/UploadCard'
@@ -10,7 +10,7 @@ import { useAuth } from './AuthContext'
 
 export default function FleetRegisterScreen() {
   const router = useRouter()
-  const { register } = useAuth()
+  const { authError, register } = useAuth()
   const [fleetName, setFleetName] = useState('GreenMotion Logistics')
   const [managerName, setManagerName] = useState('Aman Sharma')
   const [email, setEmail] = useState('fleet@greenmotion.com')
@@ -45,8 +45,12 @@ export default function FleetRegisterScreen() {
     })
 
     if (ok) {
+      Alert.alert('Registration successful', 'Your account has been created successfully.')
       router.push('/fleet-management/shift-selection')
+      return
     }
+
+    Alert.alert('Registration failed', authError || 'Please try again.')
   }
 
   return (
