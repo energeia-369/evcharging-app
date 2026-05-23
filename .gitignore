@@ -41,7 +41,5 @@ app-example
 # generated native folders
 /ios
 /android
-AppData/ 
-.vercel
+AppData/
 .env*
-!.env.example

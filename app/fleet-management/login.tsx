@@ -7,7 +7,7 @@ import { useAuth } from './AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { authError, login } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
@@ -20,16 +20,31 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    const ok = await login(email.trim(), password);
+    const result = await login(email.trim(), password);
     setLoading(false);
 
-    if (ok) {
+    if (result.success) {
       Alert.alert('Login successful', 'Welcome back.');
       router.push('/fleet-management/dashboard');
       return;
     }
 
-    Alert.alert('Login failed', authError || 'Invalid credentials');
+    if (result.status === 401) {
+      Alert.alert('Invalid credentials', result.message || 'Invalid credentials');
+      return;
+    }
+
+    if (result.status === 400) {
+      Alert.alert('Missing fields', result.message || 'Please enter your email and password.');
+      return;
+    }
+
+    if (result.status === 500) {
+      Alert.alert('Server error', result.message || 'Server error. Please try again later.');
+      return;
+    }
+
+    Alert.alert('Login failed', result.message || 'Login failed');
   }
 
   return (

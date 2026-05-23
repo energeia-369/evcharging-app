@@ -19,10 +19,17 @@ type AuthContextType = {
   isAuthenticated: boolean;
   token: string | null;
   authError: string | null;
-  login: (email: string, password: string, remember?: boolean) => Promise<boolean>;
-  register: (data: User & { password?: string }) => Promise<boolean>;
+  login: (email: string, password: string, remember?: boolean) => Promise<AuthActionResult>;
+  register: (data: User & { password?: string }) => Promise<AuthActionResult>;
   logout: () => void;
   setUser: (u: User | null) => void;
+};
+
+type AuthActionResult = {
+  success: boolean;
+  message: string;
+  status?: number;
+  code?: string;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,11 +47,89 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const STORAGE_KEY = '@energeia_auth_state';
 
+  const getBackendMessage = (error: unknown): string | null => {
+    if (!error || typeof error !== 'object') {
+      return null;
+    }
+
+    const apiError = error as {
+      response?: {
+        data?: { message?: unknown; code?: unknown };
+        status?: unknown;
+      };
+      message?: unknown;
+    };
+
+    const backendMessage = apiError.response?.data?.message;
+    if (typeof backendMessage === 'string' && backendMessage.trim()) {
+      return backendMessage;
+    }
+
+    const directMessage = apiError.message;
+    if (typeof directMessage === 'string' && directMessage.trim()) {
+      return directMessage;
+    }
+
+    return null;
+  };
+
+  const getBackendStatus = (error: unknown): number | undefined => {
+    if (!error || typeof error !== 'object') {
+      return undefined;
+    }
+
+    const apiError = error as {
+      response?: { status?: unknown };
+      status?: unknown;
+    };
+
+    if (typeof apiError.response?.status === 'number') {
+      return apiError.response.status;
+    }
+
+    if (typeof apiError.status === 'number') {
+      return apiError.status;
+    }
+
+    return undefined;
+  };
+
+  const getBackendCode = (error: unknown): string | undefined => {
+    if (!error || typeof error !== 'object') {
+      return undefined;
+    }
+
+    const apiError = error as {
+      response?: { data?: { code?: unknown } };
+    };
+
+    const code = apiError.response?.data?.code;
+    if (typeof code === 'string' && code.trim()) {
+      return code;
+    }
+
+    return undefined;
+  };
+
+  const defaultMessageByStatus = (status?: number): string => {
+    if (status === 400) return 'Please check your details and try again.';
+    if (status === 401) return 'Invalid credentials';
+    if (status === 409) return 'Email already exists';
+    if (status === 500) return 'Server error. Please try again later.';
+    return 'Something went wrong. Please try again.';
+  };
+
   const extractErrorMessage = (error: unknown): string => {
+    const backendMessage = getBackendMessage(error);
+    if (backendMessage) {
+      return backendMessage;
+    }
+
     if (error instanceof Error && error.message) {
       return error.message;
     }
-    return 'Something went wrong. Please try again.';
+
+    return defaultMessageByStatus(getBackendStatus(error));
   };
 
   useEffect(() => {
@@ -83,7 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<AuthActionResult> => {
     try {
       setAuthError(null);
       const loginResult = await loginAuth({ email, password });
@@ -107,20 +192,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isAuthenticated: true,
         })
       );
-      return true;
+      return {
+        success: true,
+        message: 'Login successful',
+        status: 200,
+      };
     } catch (error) {
-      setAuthError(extractErrorMessage(error));
-      return false;
+      const message = extractErrorMessage(error);
+      const status = getBackendStatus(error);
+      const code = getBackendCode(error);
+      setAuthError(message);
+      return {
+        success: false,
+        message,
+        status,
+        code,
+      };
     }
   };
 
-  const register = async (data: User & { password?: string }) => {
+  const register = async (data: User & { password?: string }): Promise<AuthActionResult> => {
     try {
       setAuthError(null);
-      if (!data.fullName || !data.email || !data.password) {
-        setAuthError('Full name, email, and password are required.');
-        return false;
-      }
 
       const registerResult = await registerAuth({
         fullName: data.fullName,
@@ -151,10 +244,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isAuthenticated: true,
         })
       );
-      return true;
+      return {
+        success: true,
+        message: 'User created successfully',
+        status: 200,
+      };
     } catch (error) {
-      setAuthError(extractErrorMessage(error));
-      return false;
+      const message = extractErrorMessage(error);
+      const status = getBackendStatus(error);
+      const code = getBackendCode(error);
+      setAuthError(message);
+      return {
+        success: false,
+        message,
+        status,
+        code,
+      };
     }
   };
 

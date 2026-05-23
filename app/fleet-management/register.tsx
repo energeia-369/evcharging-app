@@ -10,7 +10,7 @@ import { useAuth } from './AuthContext'
 
 export default function FleetRegisterScreen() {
   const router = useRouter()
-  const { authError, register } = useAuth()
+  const { register } = useAuth()
   const [fleetName, setFleetName] = useState('GreenMotion Logistics')
   const [managerName, setManagerName] = useState('Aman Sharma')
   const [email, setEmail] = useState('fleet@greenmotion.com')
@@ -36,7 +36,7 @@ export default function FleetRegisterScreen() {
       return
     }
 
-    const ok = await register({
+    const result = await register({
       fullName: managerName,
       email,
       phone,
@@ -44,13 +44,28 @@ export default function FleetRegisterScreen() {
       password,
     })
 
-    if (ok) {
-      Alert.alert('Registration successful', 'Your account has been created successfully.')
+    if (result.success) {
+      Alert.alert('Registration successful', result.message || 'Your account has been created successfully.')
       router.push('/fleet-management/shift-selection')
       return
     }
 
-    Alert.alert('Registration failed', authError || 'Please try again.')
+    if (result.status === 409 || result.code === 'USER_EXISTS') {
+      Alert.alert('Email already exists', result.message || 'Email already exists')
+      return
+    }
+
+    if (result.status === 400) {
+      Alert.alert('Missing fields', result.message || 'Please check your details and try again.')
+      return
+    }
+
+    if (result.status === 500) {
+      Alert.alert('Server error', result.message || 'Server error. Please try again later.')
+      return
+    }
+
+    Alert.alert('Registration failed', result.message || 'Registration failed')
   }
 
   return (

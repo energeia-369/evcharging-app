@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { authError, login } = useAuth();
+  const { login } = useAuth();
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -135,10 +135,25 @@ export default function LoginScreen() {
       return;
     }
 
-    const isValid = await login(trimmedEmail, password);
+    const result = await login(trimmedEmail, password);
 
-    if (!isValid) {
-      Alert.alert('Login failed', authError || 'Invalid credentials');
+    if (!result.success) {
+      if (result.status === 401) {
+        Alert.alert('Invalid credentials', result.message || 'Invalid credentials');
+        return;
+      }
+
+      if (result.status === 400) {
+        Alert.alert('Missing fields', result.message || 'Please enter valid credentials.');
+        return;
+      }
+
+      if (result.status === 500) {
+        Alert.alert('Server error', result.message || 'Server error. Please try again later.');
+        return;
+      }
+
+      Alert.alert('Login failed', result.message || 'Login failed');
       return;
     }
 

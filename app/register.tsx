@@ -16,7 +16,7 @@ import { useAuth } from './fleet-management/AuthContext';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { authError, register } = useAuth();
+  const { register } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -26,58 +26,45 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  function validate(): boolean {
-    const next: Record<string, string> = {};
-
-    if (!fullName.trim()) {
-      next.fullName = 'Full name is required';
-    }
-
-    if (!email.trim()) {
-      next.email = 'Email is required';
-    } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      next.email = 'Enter a valid email';
-    }
-
-    if (!mobile.trim()) {
-      next.mobile = 'Mobile number is required';
-    } else if (!/^\+?[0-9]{7,15}$/.test(mobile)) {
-      next.mobile = 'Enter a valid phone number';
-    }
-
-    if (!password) {
-      next.password = 'Password is required';
-    } else if (password.length < 8) {
-      next.password = 'Minimum 8 characters';
+  async function handleRegister() {
+    if (!fullName.trim() || !email.trim() || !mobile.trim() || !password || !confirmPassword) {
+      Alert.alert('Registration required', 'Please fill in all fields before registering.');
+      return;
     }
 
     if (confirmPassword !== password) {
-      next.confirmPassword = 'Passwords do not match';
+      Alert.alert('Registration failed', 'Passwords do not match.');
+      return;
     }
 
-    setErrors(next);
-
-    return Object.keys(next).length === 0;
-  }
-
-  async function handleRegister() {
-    if (!validate()) return;
-
-    const registered = await register({
+    const result = await register({
       fullName,
       email: email.trim(),
       phone: mobile.trim(),
       password,
     });
 
-    if (!registered) {
-      Alert.alert('Registration failed', authError || 'Please try again.');
+    if (!result.success) {
+      if (result.status === 409 || result.code === 'USER_EXISTS') {
+        Alert.alert('Email already exists', result.message || 'Email already exists');
+        return;
+      }
+
+      if (result.status === 400) {
+        Alert.alert('Missing fields', result.message || 'Please check your details and try again.');
+        return;
+      }
+
+      if (result.status === 500) {
+        Alert.alert('Server error', result.message || 'Server error. Please try again later.');
+        return;
+      }
+
+      Alert.alert('Registration failed', result.message || 'Registration failed');
       return;
     }
 
-    Alert.alert('Registration successful', 'Your account has been created successfully.');
+    Alert.alert('Registration successful', result.message || 'Your account has been created successfully.');
     router.push('/role-selection');
   }
 
@@ -109,10 +96,6 @@ export default function RegisterScreen() {
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
-
-            {!!errors.fullName && (
-              <Text style={styles.error}>{errors.fullName}</Text>
-            )}
           </View>
 
           {/* Email */}
@@ -127,10 +110,6 @@ export default function RegisterScreen() {
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
-
-            {!!errors.email && (
-              <Text style={styles.error}>{errors.email}</Text>
-            )}
           </View>
 
           {/* Mobile */}
@@ -145,10 +124,6 @@ export default function RegisterScreen() {
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
-
-            {!!errors.mobile && (
-              <Text style={styles.error}>{errors.mobile}</Text>
-            )}
           </View>
 
           {/* Password */}
@@ -174,10 +149,6 @@ export default function RegisterScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-
-            {!!errors.password && (
-              <Text style={styles.error}>{errors.password}</Text>
-            )}
           </View>
 
           {/* Confirm Password */}
@@ -203,12 +174,6 @@ export default function RegisterScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-
-            {!!errors.confirmPassword && (
-              <Text style={styles.error}>
-                {errors.confirmPassword}
-              </Text>
-            )}
           </View>
 
           {/* Register Button */}

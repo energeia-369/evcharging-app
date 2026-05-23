@@ -1,11 +1,7 @@
-import { Platform } from 'react-native';
-
 // Shared fetch client for the Expo app's API layer.
-const DEFAULT_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_BASE_URL = 'http://10.0.2.2:5001';
 
-const normalizeBaseUrl = (value: string) => value.replace(/localhost/gi, '10.0.2.2').replace(/\/+$/, '');
-
-export const BASE_URL = normalizeBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL || DEFAULT_BASE_URL);
+export const BASE_URL = API_BASE_URL;
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
@@ -29,6 +25,21 @@ export interface RequestOptions {
   token?: string;
   query?: Record<string, string | number | boolean | undefined | null>;
   headers?: Record<string, string>;
+}
+
+export class ApiRequestError extends Error {
+  status?: number;
+  response?: {
+    status: number;
+    data: unknown;
+  };
+
+  constructor(message: string, status?: number, data?: unknown) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = status;
+    this.response = status !== undefined ? { status, data } : undefined;
+  }
 }
 
 const buildUrl = (path: string, query?: RequestOptions['query']) => {
@@ -85,7 +96,7 @@ export const apiRequest = async <T>(path: string, options: RequestOptions = {}):
       error: error instanceof Error ? error.message : String(error),
     });
 
-    throw new Error(error instanceof Error ? error.message : 'Network request failed');
+    throw new ApiRequestError(error instanceof Error ? error.message : 'Network request failed');
   } finally {
     clearTimeout(timeoutId);
   }
@@ -105,7 +116,7 @@ export const apiRequest = async <T>(path: string, options: RequestOptions = {}):
       error: error instanceof Error ? error.message : String(error),
     });
 
-    throw new Error('Unable to read server response.');
+    throw new ApiRequestError('Unable to read server response.', response.status);
   }
 
   console.log('[API] Response', {
@@ -130,7 +141,7 @@ export const apiRequest = async <T>(path: string, options: RequestOptions = {}):
       errorMessage,
     });
 
-    throw new Error(errorMessage);
+    throw new ApiRequestError(errorMessage, response.status, payload);
   }
 
   return payload;
