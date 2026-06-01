@@ -1,5 +1,5 @@
 // Shared fetch client for the Expo app's API layer.
-const API_BASE_URL = 'http://10.0.2.2:5001';
+const API_BASE_URL = 'https://ev-backend-didr.onrender.com';
 
 export const BASE_URL = API_BASE_URL;
 
