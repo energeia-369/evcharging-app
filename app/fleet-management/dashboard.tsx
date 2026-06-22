@@ -1,7 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo } from 'react'
+<<<<<<< HEAD
 import { Pressable, ScrollView, StyleSheet, Text, View, Alert } from 'react-native'
+=======
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FleetCard, SectionHeader } from '../../components/fleet/Shared'
 import { analyticsData, trips } from '../../lib/mock/fleetData'
@@ -42,13 +46,18 @@ export default function FleetDashboard() {
 
   const quickActions: QuickAction[] = [
     { label: 'Vehicles & Drivers', icon: 'truck', route: '/fleet-management/vehicles' },
+<<<<<<< HEAD
     { label: 'Point-to-Point Fleet Service', icon: 'qrcode-scan', route: '/fleet-management/trip-booking' },
+=======
+    { label: 'Trip Booking', icon: 'qrcode-scan', route: '/fleet-management/trip-booking' },
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
     { label: 'Live Tracking', icon: 'map-marker', route: '/fleet-management/tracking' },
     { label: 'Fleet Reports', icon: 'chart-line', route: '/fleet-management/reports' },
     { label: 'Vehicle Charging', icon: 'battery-charging', route: '/fleet-management/charging' },
     { label: 'Invoice & Settlement', icon: 'file-document', route: '/fleet-management/invoice' },
   ]
 
+<<<<<<< HEAD
   function handleActionPress(action: QuickAction) {
     if (action.route === '/fleet-management/trip-booking') {
       if (summary.totalVehicles === 0 || summary.totalDrivers === 0) {
@@ -62,6 +71,8 @@ export default function FleetDashboard() {
     router.push(action.route as any)
   }
 
+=======
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
   function handleLogout() {
     resetOperations()
     logout()
@@ -167,6 +178,7 @@ export default function FleetDashboard() {
           </View>
         </FleetCard>
 
+<<<<<<< HEAD
         <SectionHeader title="Onboarding & KYC Status" subtitle="Upload and verify your fleet documents." />
         <FleetCard style={styles.kycCard}>
           <View style={styles.kycHeaderRow}>
@@ -225,6 +237,12 @@ export default function FleetDashboard() {
         <View style={styles.actionGrid}>
           {quickActions.map(action => (
             <Pressable key={action.route} style={styles.actionCard} onPress={() => handleActionPress(action)}>
+=======
+        <SectionHeader title="Quick Actions" subtitle="Jump into each connected fleet module." />
+        <View style={styles.actionGrid}>
+          {quickActions.map(action => (
+            <Pressable key={action.route} style={styles.actionCard} onPress={() => router.push(action.route as any)}>
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
               <MaterialCommunityIcons name={action.icon as any} size={20} color="#10b981" />
               <Text style={styles.actionLabel}>{action.label}</Text>
             </Pressable>
@@ -299,6 +317,7 @@ const styles = StyleSheet.create({
   mappingRow: { borderBottomWidth: 1, borderBottomColor: '#e2efe5', paddingBottom: 8, marginBottom: 8 },
   mappingVehicle: { color: '#0f5132', fontSize: 12, fontWeight: '900' },
   mappingDrivers: { color: '#4f6952', fontSize: 12, marginTop: 4, lineHeight: 18 },
+<<<<<<< HEAD
   kycCard: { marginBottom: 16, gap: 12 },
   kycHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   kycCardTitle: { color: '#0f5132', fontSize: 15, fontWeight: '900' },
@@ -310,4 +329,6 @@ const styles = StyleSheet.create({
   kycSuccessText: { color: '#065f46', fontSize: 12, fontWeight: '800' },
   kycWarningBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fef3c7', padding: 10, borderRadius: 10, marginTop: 4 },
   kycWarningText: { color: '#92400e', fontSize: 12, fontWeight: '800' },
+=======
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
 })

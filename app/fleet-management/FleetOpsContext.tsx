@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 import React, { createContext, ReactNode, useContext, useMemo, useState, useEffect } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useAuth } from './AuthContext'
+=======
+import React, { createContext, ReactNode, useContext, useMemo, useState } from 'react'
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
 import { drivers, vehicles, type Driver, type Vehicle } from '../../lib/mock/fleetData'
 
 type ShiftSlot = 'Morning shift' | 'Evening shift' | 'Night shift'
@@ -232,8 +236,11 @@ const initialInvoiceState: InvoiceState = {
 const FleetOpsContext = createContext<FleetOpsContextType | undefined>(undefined)
 
 export function FleetOpsProvider({ children }: { children: ReactNode }) {
+<<<<<<< HEAD
   const { user } = useAuth()
   const [isLoaded, setIsLoaded] = useState(false)
+=======
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
   const [bookingDraft, setBookingDraftState] = useState<BookingDraft>(initialBookingDraft)
   const [assignment, setAssignmentState] = useState<Assignment>({ vehicleId: defaultVehicle.id, driverId: defaultDriver.id })
   const [fleetVehicles, setFleetVehicles] = useState<FleetVehicleRecord[]>(seededVehicles)
@@ -244,6 +251,7 @@ export function FleetOpsProvider({ children }: { children: ReactNode }) {
   const [tripSummary, setTripSummary] = useState<TripSummary | null>(null)
   const [invoiceState, setInvoiceState] = useState<InvoiceState>(initialInvoiceState)
 
+<<<<<<< HEAD
   // Load data on user change
   useEffect(() => {
     setIsLoaded(false)
@@ -299,6 +307,8 @@ export function FleetOpsProvider({ children }: { children: ReactNode }) {
     }
   }, [fleetDrivers, user?.email, isLoaded])
 
+=======
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
   const currentVehicle = useMemo(() => fleetVehicles.find(vehicle => vehicle.id === assignment.vehicleId) ?? defaultVehicle, [assignment.vehicleId, fleetVehicles])
   const currentDriver = useMemo(() => fleetDrivers.find(driver => driver.id === assignment.driverId) ?? defaultDriver, [assignment.driverId, fleetDrivers])
 

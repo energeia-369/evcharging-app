@@ -12,6 +12,7 @@ export default function TrackingScreen() {
   const [markerPosition, setMarkerPosition] = useState({ left: 18, top: 122 })
 
   useEffect(() => {
+<<<<<<< HEAD
     const nextProgress = tripSession.progress
     setMarkerPosition({
       left: 18 + nextProgress * 1.9,
@@ -20,6 +21,8 @@ export default function TrackingScreen() {
   }, [tripSession.progress])
 
   useEffect(() => {
+=======
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
     startTrip()
 
     const timer = setInterval(() => {
@@ -30,6 +33,14 @@ export default function TrackingScreen() {
         const nextEtaMinutes = Math.max(4, 18 - Math.floor(nextProgress / 8))
         const nextDistance = Math.min(bookingDraft.distance, (bookingDraft.distance * nextProgress) / 100)
 
+<<<<<<< HEAD
+=======
+        setMarkerPosition({
+          left: 18 + nextProgress * 1.9,
+          top: 122 - Math.sin(nextProgress / 12) * 18,
+        })
+
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
         return {
           progress: nextProgress,
           batteryLevel: nextBattery,
@@ -43,7 +54,11 @@ export default function TrackingScreen() {
     }, 1200)
 
     return () => clearInterval(timer)
+<<<<<<< HEAD
   }, [])
+=======
+  }, [bookingDraft.distance, startTrip, updateTripSession])
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
 
   const progressLabel = useMemo(() => `${tripSession.progress}%`, [tripSession.progress])
 

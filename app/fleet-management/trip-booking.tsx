@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { FleetCard, SectionHeader } from '../../components/fleet/Shared'
 import { useFleetOps } from './FleetOpsContext'
 
+<<<<<<< HEAD
 const PREDEFINED_ROUTES = [
   { pickup: 'Ramwadi', drop: 'Airport', distance: 6 },
   { pickup: 'Ramwadi', drop: 'Kharadi', distance: 5 },
@@ -25,6 +26,13 @@ export default function TripBookingScreen() {
   const { setBookingDraft } = useFleetOps()
   const [pickupLocation, setPickupLocation] = useState('Ramwadi')
   const [dropLocation, setDropLocation] = useState('Airport')
+=======
+export default function TripBookingScreen() {
+  const router = useRouter()
+  const { setBookingDraft } = useFleetOps()
+  const [pickupLocation, setPickupLocation] = useState('Bandra West Metro Station')
+  const [dropLocation, setDropLocation] = useState('Mumbai Airport Terminal 2')
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
   const [passengerName, setPassengerName] = useState('Aarav Mehta')
   const [contactNumber, setContactNumber] = useState('9876543210')
   const [vehicleType, setVehicleType] = useState('Premium EV Sedan')
@@ -32,11 +40,15 @@ export default function TripBookingScreen() {
   const [priority, setPriority] = useState(true)
 
   const tripPreview = useMemo(() => {
+<<<<<<< HEAD
     const matched = PREDEFINED_ROUTES.find(
       r => r.pickup.toLowerCase() === pickupLocation.trim().toLowerCase() &&
            r.drop.toLowerCase() === dropLocation.trim().toLowerCase()
     )
     const distance = matched ? matched.distance : Math.max(6, Math.round((pickupLocation.length + dropLocation.length) / 4))
+=======
+    const distance = Math.max(6, Math.round((pickupLocation.length + dropLocation.length) / 4))
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
     const estimatedFare = distance * 42 + (priority ? 150 : 0)
     return {
       distance,
@@ -92,6 +104,7 @@ export default function TripBookingScreen() {
           </View>
         </FleetCard>
 
+<<<<<<< HEAD
         <SectionHeader title="Quick Select Route" subtitle="Tap a predefined route to auto-fill." />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.shortcutsScroll} contentContainerStyle={styles.shortcutsContent}>
           {PREDEFINED_ROUTES.map((route, idx) => (
@@ -121,6 +134,8 @@ export default function TripBookingScreen() {
           ))}
         </ScrollView>
 
+=======
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
         <SectionHeader title="Booking Details" subtitle="Enter passenger and trip information." />
         <FleetCard style={styles.formCard}>
           <View style={styles.field}>
@@ -212,12 +227,15 @@ const styles = StyleSheet.create({
   priorityBadgeText: { color: '#059669', fontWeight: '900', fontSize: 11 },
   routeBox: { borderRadius: 16, backgroundColor: '#f0fbf5', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   routeText: { flex: 1, color: '#0f5132', fontWeight: '700', fontSize: 12, lineHeight: 17 },
+<<<<<<< HEAD
   shortcutsScroll: { marginBottom: 16, maxHeight: 45 },
   shortcutsContent: { gap: 8, paddingRight: 16 },
   shortcutPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#edf9f1', borderColor: '#dbe7dd', borderWidth: 1, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12 },
   shortcutPillActive: { backgroundColor: '#10b981', borderColor: '#10b981' },
   shortcutText: { color: '#0f5132', fontSize: 12, fontWeight: '700' },
   shortcutTextActive: { color: '#ffffff' },
+=======
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
   formCard: { marginBottom: 16 },
   field: { marginBottom: 12 },
   label: { color: '#0f5132', fontSize: 12, fontWeight: '800', marginBottom: 6 },

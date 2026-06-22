@@ -17,6 +17,7 @@ export default function FleetRegisterScreen() {
   const [password, setPassword] = useState('Fleet@1234')
   const [phone, setPhone] = useState('9876543210')
   const [city, setCity] = useState('Bengaluru')
+<<<<<<< HEAD
   const [showValidation, setShowValidation] = useState(false)
 
   const completion = useMemo(() => {
@@ -29,6 +30,24 @@ export default function FleetRegisterScreen() {
     if (!fleetName.trim() || !managerName.trim() || !email.trim() || !password || !phone.trim() || !city.trim()) {
       setShowValidation(true)
       Alert.alert('Missing fields', 'Please fill in all details to continue.')
+=======
+  const [aadhaarFile, setAadhaarFile] = useState<SelectedFile | null>(null)
+  const [panFile, setPanFile] = useState<SelectedFile | null>(null)
+  const [bankPassbookFile, setBankPassbookFile] = useState<SelectedFile | null>(null)
+  const [showValidation, setShowValidation] = useState(false)
+
+  const completion = useMemo(() => {
+    const fields = [fleetName, managerName, email, password, phone, city, aadhaarFile, panFile, bankPassbookFile]
+    const filled = fields.filter(Boolean).length
+    return Math.round((filled / fields.length) * 100)
+  }, [aadhaarFile, bankPassbookFile, city, email, fleetName, managerName, panFile, phone, password])
+
+  async function handleContinue() {
+    const requiredDocumentsReady = Boolean(aadhaarFile && panFile && bankPassbookFile)
+
+    if (!requiredDocumentsReady) {
+      setShowValidation(true)
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
       return
     }
 
@@ -123,7 +142,23 @@ export default function FleetRegisterScreen() {
           </View>
         </FleetCard>
 
+<<<<<<< HEAD
 
+=======
+        <SectionHeader title="Identity Documents" subtitle="Upload the manager verification documents before continuing." />
+        <View style={styles.uploadGrid}>
+          <UploadCard label="Aadhaar Card" file={aadhaarFile} onFileSelected={setAadhaarFile} required showValidation={showValidation} warningText="Aadhaar Card is required for registration." description="Verify the manager identity using a government ID." />
+          <UploadCard label="PAN Card" file={panFile} onFileSelected={setPanFile} required showValidation={showValidation} warningText="PAN Card is required for registration." description="Used for fleet tax and business verification." />
+          <UploadCard label="Bank Passbook" file={bankPassbookFile} onFileSelected={setBankPassbookFile} required showValidation={showValidation} warningText="Bank Passbook is required for registration." description="Attach the account proof for payment setup." />
+        </View>
+
+        {showValidation && !(aadhaarFile && panFile && bankPassbookFile) ? (
+          <View style={styles.warningBanner}>
+            <MaterialCommunityIcons name="file-document" size={18} color="#b91c1c" />
+            <Text style={styles.warningBannerText}>Please upload all required identity documents to continue.</Text>
+          </View>
+        ) : null}
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
 
         <SectionHeader title="Why this matters" />
         <View style={styles.summaryGrid}>

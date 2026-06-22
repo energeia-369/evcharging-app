@@ -23,7 +23,11 @@
     "@react-navigation/native": "^7.1.8",
     "axios": "^1.16.0",
     "dotenv": "^17.4.2",
+<<<<<<< HEAD
     "expo": "^54.0.33",
+=======
+    "expo": "~54.0.33",
+>>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
     "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.13",
     "expo-document-picker": "^55.0.13",
