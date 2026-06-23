@@ -348,7 +348,7 @@ export default function NearbyChargingMapScreen() {
 
         {isNavigationActive ? (
           <TouchableOpacity style={[styles.navigationButton, styles.navigationButtonStop]} onPress={handleStopNavigation}>
-            <MaterialCommunityIcons name="navigation-variant-off" size={18} color="#ffffff" />
+            <MaterialCommunityIcons name={"navigation-variant-off" as any} size={18} color="#ffffff" />
             <Text style={styles.navigationButtonText}>Stop Navigation</Text>
           </TouchableOpacity>
         ) : (

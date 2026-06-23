@@ -34,7 +34,7 @@ export interface TestDriveBooking {
   customerPhone: string;
   preferredDate: string;
   preferredTimeSlot: string;
-  status: 'booked' | 'completed' | 'cancelled';
+  status: 'booked' | 'completed' | 'cancelled' | 'confirmed';
   createdAt: string;
 }
 

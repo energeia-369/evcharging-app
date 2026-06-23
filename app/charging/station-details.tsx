@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    width: 'fit-content',
+    alignSelf: 'flex-start',
   },
   ratingText: {
     fontSize: 16,

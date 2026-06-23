@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   paymentOptionLabel: { fontSize: 13, fontWeight: '800', color: '#0f5132' },
   paymentOptionSub: { fontSize: 11, color: '#6b7280', marginTop: 2 },
   paymentFooter: { gap: 12, marginTop: 8 },
-  cashbackNotice: { color: '#059669', fontSize: 11, fontWeight: '850', textAlign: 'center', lineHeight: 16 },
+  cashbackNotice: { color: '#059669', fontSize: 11, fontWeight: '800', textAlign: 'center', lineHeight: 16 },
   paymentConfirmBtn: { backgroundColor: '#10b981', borderRadius: 16, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   paymentConfirmBtnText: { color: '#ffffff', fontWeight: '900', fontSize: 13 },
 })

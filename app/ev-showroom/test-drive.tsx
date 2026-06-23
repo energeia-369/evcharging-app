@@ -3,7 +3,9 @@ import { useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { useShowroom } from '../../context/showroom-context'
-import { showroomBranches, showroomVehicles, timeSlots } from '../../lib/mock/showroomData'
+import { showroomBranches, showroomVehicles } from '../../lib/mock/showroomData'
+
+const timeSlots = ['09:00 AM - 11:00 AM', '11:00 AM - 01:00 PM', '02:00 PM - 04:00 PM', '04:00 PM - 06:00 PM']
 
 export default function TestDriveScreen() {
   const router = useRouter()
@@ -81,7 +83,7 @@ export default function TestDriveScreen() {
           <Text style={styles.fieldLabel}>Select time</Text>
           <View style={styles.timeGrid}>
             {safeTimeSlots.length > 0 ? (
-              safeTimeSlots.map((slot) => (
+              safeTimeSlots.map((slot: string) => (
                 <TouchableOpacity key={slot} onPress={() => updateBookingDraft({ time: slot })} style={[styles.timeSlot, bookingDraft.time === slot && styles.timeSlotActive]}>
                   <Text style={[styles.timeText, bookingDraft.time === slot && styles.timeTextActive]}>{slot}</Text>
                 </TouchableOpacity>

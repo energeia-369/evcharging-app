@@ -147,7 +147,7 @@ export default function OasisCafeScreen() {
           </View>
         ) : features.length === 0 ? (
           <View style={styles.emptyCard}>
-            <MaterialCommunityIcons name="silverware-fork-knife-off" size={22} color="#94A3B8" />
+            <MaterialCommunityIcons name={"silverware-fork-knife-off" as any} size={22} color="#94A3B8" />
             <Text style={styles.emptyTitle}>No cafe features available</Text>
             <Text style={styles.emptyText}>Try again in a moment or refresh the module.</Text>
           </View>

@@ -400,7 +400,7 @@ export default function StationDetailsScreen() {
                 <View key={index} style={styles.amenityItem}>
                   <View style={styles.amenityIconBg}>
                     <MaterialCommunityIcons
-                      name={getAmenityIcon(amenity)}
+                      name={getAmenityIcon(amenity) as any}
                       size={20}
                       color="#10b981"
                     />
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    width: 'fit-content',
+    alignSelf: 'flex-start',
   },
   ratingText: {
     fontSize: 16,

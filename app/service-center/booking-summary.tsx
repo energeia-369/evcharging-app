@@ -128,7 +128,7 @@ export default function BookingSummary() {
             <View style={styles.priceRow}><Text style={styles.priceLabel}>Service fee</Text><Text style={styles.priceValue}>{formatCurrency(serviceFee)}</Text></View>
             <View style={styles.priceRow}><Text style={styles.priceLabel}>Pickup & drop</Text><Text style={styles.priceValue}>{formatCurrency(pickupFee)}</Text></View>
             <View style={styles.priceRow}><Text style={styles.priceLabel}>GST estimate</Text><Text style={styles.priceValue}>{formatCurrency(gst)}</Text></View>
-            <View style={[styles.priceRow, styles.totalRow]}><Text style={styles.totalLabel}>Grand total</Text><Text style={styles.totalValue}>{formatCurrency(total + gst)}</Text></View>
+            <View style={[styles.priceRow, styles.totalRow]}><Text style={styles.totalLabel}>Grand total</Text><Text style={styles.totalValue}>{formatCurrency(grandTotal)}</Text></View>
           </View>
 
           <Pressable style={({ pressed }) => [styles.ctaButton, pressed && styles.ctaButtonPressed]} onPress={handleConfirm} disabled={processing}>

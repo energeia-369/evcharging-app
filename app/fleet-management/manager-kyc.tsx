@@ -22,9 +22,9 @@ export default function ManagerKycScreen() {
       AsyncStorage.getItem(`@energeia_manager_kyc_${user.email}`).then((val) => {
         if (val === 'verified') {
           setIsSubmitted(true)
-          setAadhaarFile({ name: 'aadhaar_verified.pdf', size: 1024, type: 'pdf' })
-          setPanFile({ name: 'pan_verified.pdf', size: 1024, type: 'pdf' })
-          setBankPassbookFile({ name: 'passbook_verified.pdf', size: 1024, type: 'pdf' })
+          setAadhaarFile({ uri: 'dummy_uri', name: 'aadhaar_verified.pdf', size: 1024, mimeType: 'application/pdf' })
+          setPanFile({ uri: 'dummy_uri', name: 'pan_verified.pdf', size: 1024, mimeType: 'application/pdf' })
+          setBankPassbookFile({ uri: 'dummy_uri', name: 'passbook_verified.pdf', size: 1024, mimeType: 'application/pdf' })
         }
       })
     }

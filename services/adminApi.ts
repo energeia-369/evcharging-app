@@ -1,6 +1,7 @@
 import { apiRequest, ApiResponse, BackendEnvelope, toApiResponse } from './apiClient';
-import { getChargingHistory } from './chargingApi';
+import { getChargingHistory, getChargingStations } from './chargingApi';
 import { getServices } from './serviceApi';
+import { getCafeOrders } from './cafeApi';
 
 export interface DashboardStats {
   totalUsers: number;
@@ -115,11 +116,11 @@ export async function getChargingReports(): Promise<ApiResponse<ChargingReport[]
   const [stations, bookings] = await Promise.all([getChargingStations(), getChargingHistory().catch(() => toApiResponse([], ''))]);
 
   return toApiResponse(
-    stations.data.map((station) => ({
+    stations.data.map((station: any) => ({
       reportId: station.id,
       stationName: station.stationName,
       city: 'Unknown',
-      sessionsCount: bookings.data.filter((booking) => booking.id && booking.id.includes(station.id)).length,
+      sessionsCount: bookings.data.filter((booking: any) => booking.id && booking.id.includes(station.id)).length,
       totalEnergyKwh: 0,
       peakHourUsage: 0,
       averageChargingDurationMinutes: 0,
@@ -137,7 +138,7 @@ export async function getRevenueAnalytics(): Promise<ApiResponse<RevenueAnalytic
     getChargingReports(),
   ]);
 
-  const totalRevenue = cafeOrders.data.reduce((sum, order) => sum + order.amount, 0);
+  const totalRevenue = cafeOrders.data.reduce((sum: number, order: any) => sum + order.amount, 0);
 
   return toApiResponse(
     [

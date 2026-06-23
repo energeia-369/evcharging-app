@@ -122,7 +122,7 @@ export default function VehiclesScreen() {
       return
     }
 
-    const targetDriverId = editingDriverId ?? result.driverId
+    const targetDriverId = editingDriverId ?? (result as any).driverId
     if (targetDriverId && selectedVehicleIdForDriver) {
       assignDriverShift({
         driverId: targetDriverId,

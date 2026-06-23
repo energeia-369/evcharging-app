@@ -328,7 +328,7 @@ export default function RazorpayCheckoutScreen() {
             </View>
             <View style={styles.receiptRow}>
               <Text style={styles.receiptLabel}>Status</Text>
-              <Text style={[styles.receiptVal, { color: '#059669', fontWeight: '950' }]}>PAID</Text>
+              <Text style={[styles.receiptVal, { color: '#059669', fontWeight: '900' }]}>PAID</Text>
             </View>
           </View>
           <Text style={styles.redirectText}>Redirecting you back to your ride...</Text>
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   bankGrid: { flexDirection: 'row', gap: 8, marginTop: 6 },
   bankItem: { flex: 1, backgroundColor: '#f3f4f6', padding: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#e5e7eb' },
   bankItemActive: { backgroundColor: '#f0f7ff', borderColor: '#0052cc' },
-  bankText: { color: '#4b5563', fontSize: 12, fontWeight: '750' },
+  bankText: { color: '#4b5563', fontSize: 12, fontWeight: '700' },
   bankTextActive: { color: '#0052cc' },
   footer: { marginTop: 30, alignItems: 'center', gap: 10 },
   payButton: { backgroundColor: '#0052cc', borderRadius: 16, paddingVertical: 16, width: '100%', alignItems: 'center' },
@@ -412,6 +412,6 @@ const styles = StyleSheet.create({
   receiptBox: { backgroundColor: '#ffffff', borderRadius: 18, padding: 16, width: '100%', maxWidth: 300, gap: 8, marginVertical: 20, borderWidth: 1, borderColor: '#d1fae5' },
   receiptRow: { flexDirection: 'row', justifyContent: 'space-between' },
   receiptLabel: { color: '#6b7280', fontSize: 12 },
-  receiptVal: { color: '#1f2937', fontSize: 12, fontWeight: '850' },
+  receiptVal: { color: '#1f2937', fontSize: 12, fontWeight: '800' },
   redirectText: { fontSize: 12, color: '#6b7280' },
 })

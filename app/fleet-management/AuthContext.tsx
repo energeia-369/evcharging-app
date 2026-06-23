@@ -224,11 +224,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthError(null);
 
       const registerResult = await registerAuth({
-        fullName: data.fullName,
-        email: data.email,
+        fullName: data.fullName || '',
+        email: data.email || '',
         mobile: data.phone || data.mobile || '',
-        password: data.password,
-        role: data.role || 'fleet_manager',
+        password: data.password || '',
+        role: (data.role || 'fleet_manager') as any,
       });
 
       setToken(registerResult.data.token);

@@ -14,7 +14,7 @@ type BookingContextValue = {
   activeBookingId: string
   setActiveBookingId: React.Dispatch<React.SetStateAction<string>>
   activeBooking: BookingRecord | undefined
-  createBooking: () => BookingRecord
+  createBooking: (overrides?: Partial<BookingDraft>) => BookingRecord
   updateBooking: (bookingId: string, patch: Partial<BookingRecord>) => void
 }
 
