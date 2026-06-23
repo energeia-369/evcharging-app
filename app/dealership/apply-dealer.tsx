@@ -183,8 +183,4 @@ const styles = StyleSheet.create({
   termsText: { color: '#064E3B', flex: 1 },
   submitButton: { backgroundColor: '#059669', borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
   submitButtonText: { color: '#FFFFFF', fontWeight: '900' },
-<<<<<<< HEAD
-=======
-  uploadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
->>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
 })

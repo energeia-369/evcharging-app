@@ -142,7 +142,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (parsed.user) setUser(parsed.user);
           if (parsed.token) {
             setToken(parsed.token);
-<<<<<<< HEAD
             try {
               const profile = await getAuthProfile(parsed.token);
               setUser({
@@ -162,19 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setIsAuthenticated(false);
               AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
             }
-=======
-            const profile = await getAuthProfile(parsed.token);
-            setUser({
-              id: profile.data.id,
-              fullName: profile.data.fullName,
-              name: profile.data.name,
-              email: profile.data.email,
-              mobile: profile.data.mobile,
-              role: profile.data.role,
-              profileImage: profile.data.profileImage,
-            });
-            setIsAuthenticated(true);
->>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
           } else if (parsed.isAuthenticated) {
             setIsAuthenticated(true);
           }
@@ -242,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: data.email,
         mobile: data.phone || data.mobile || '',
         password: data.password,
-        role: 'fleet_manager',
+        role: data.role || 'fleet_manager',
       });
 
       setToken(registerResult.data.token);

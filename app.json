@@ -70,19 +70,15 @@
       "router": {},
       "eas": {
         "projectId": "83eb1e0d-5899-47d7-aa50-dc5486a479f9"
-<<<<<<< HEAD
       },
-      "API_BASE_URL": "http://localhost:5001",
-      "SOCKET_URL": "http://localhost:5001",
+      "API_BASE_URL": "https://ev-backend-didr.onrender.com",
+      "SOCKET_URL": "https://ev-backend-didr.onrender.com",
       "API_TIMEOUT": "30000",
       "GOOGLE_MAPS_API_KEY_IOS": "YOUR_IOS_GOOGLE_MAPS_API_KEY",
       "GOOGLE_MAPS_API_KEY_ANDROID": "YOUR_ANDROID_GOOGLE_MAPS_API_KEY",
       "ENABLE_DEBUG_LOGS": "false",
       "ENABLE_MOCK_DATA": "false",
-      "ENV": "development"
-=======
-      }
->>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
+      "ENV": "production"
     }
   }
 }

@@ -76,7 +76,7 @@ export default function InvoiceScreen() {
           </View>
           <View style={styles.breakdownRow}>
             <Text style={styles.breakdownLabel}>Payment method</Text>
-            <Text style={styles.breakdownValue}>Corporate wallet</Text>
+            <Text style={styles.breakdownValue}>{bookingDraft.paymentMethod ?? 'Corporate wallet'}</Text>
           </View>
           <View style={styles.breakdownTotal}>
             <Text style={styles.breakdownTotalLabel}>Grand Total</Text>

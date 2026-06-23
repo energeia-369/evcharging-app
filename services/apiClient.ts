@@ -1,12 +1,8 @@
 // Shared fetch client for the Expo app's API layer.
-<<<<<<< HEAD
 import { config, getApiUrl } from './config';
 
 // Get base URL from configuration (environment variables)
 const API_BASE_URL = getApiUrl();
-=======
-const API_BASE_URL = 'https://ev-backend-didr.onrender.com';
->>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
 
 export const BASE_URL = API_BASE_URL;
 
@@ -85,11 +81,7 @@ export const apiRequest = async <T>(path: string, options: RequestOptions = {}):
   console.log('[API] Request', { method, url: requestUrl, hasBody, query: options.query });
 
   const controller = new AbortController();
-<<<<<<< HEAD
   const timeoutId = setTimeout(() => controller.abort(), config.api.timeout);
-=======
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
->>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
 
   let response: Response;
 
@@ -144,11 +136,7 @@ export const apiRequest = async <T>(path: string, options: RequestOptions = {}):
         ? String((payload as { message?: unknown }).message)
         : `Request failed with status ${response.status}`;
 
-<<<<<<< HEAD
     console.warn('[API] Request failed', {
-=======
-    console.error('[API] Request failed', {
->>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
       method,
       url: requestUrl,
       status: response.status,

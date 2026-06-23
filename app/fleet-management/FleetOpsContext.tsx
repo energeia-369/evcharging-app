@@ -1,10 +1,6 @@
-<<<<<<< HEAD
 import React, { createContext, ReactNode, useContext, useMemo, useState, useEffect } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useAuth } from './AuthContext'
-=======
-import React, { createContext, ReactNode, useContext, useMemo, useState } from 'react'
->>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
 import { drivers, vehicles, type Driver, type Vehicle } from '../../lib/mock/fleetData'
 
 type ShiftSlot = 'Morning shift' | 'Evening shift' | 'Night shift'
@@ -59,6 +55,7 @@ type BookingDraft = {
   distance: number
   scheduledAt: string
   priority: boolean
+  paymentMethod?: string
 }
 
 type Assignment = {
@@ -158,6 +155,12 @@ type FleetOpsContextType = {
   invoiceState: InvoiceState
   completeSettlement: () => void
   resetOperations: () => void
+  nxlTokens: number
+  setNxlTokens: (tokens: number) => void
+  useNxlTokens: boolean
+  setUseNxlTokens: (use: boolean) => void
+  earnNxlTokens: (fare: number) => void
+  redeemNxlTokens: (fare: number) => number
 }
 
 const defaultVehicle = vehicles.find(vehicle => vehicle.status !== 'maintenance') ?? vehicles[0]
@@ -214,6 +217,7 @@ const initialBookingDraft: BookingDraft = {
   distance: 18.6,
   scheduledAt: 'Today, 05:30 PM',
   priority: true,
+  paymentMethod: 'Corporate wallet',
 }
 
 const initialTripSession: TripSession = {
@@ -236,11 +240,8 @@ const initialInvoiceState: InvoiceState = {
 const FleetOpsContext = createContext<FleetOpsContextType | undefined>(undefined)
 
 export function FleetOpsProvider({ children }: { children: ReactNode }) {
-<<<<<<< HEAD
   const { user } = useAuth()
   const [isLoaded, setIsLoaded] = useState(false)
-=======
->>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
   const [bookingDraft, setBookingDraftState] = useState<BookingDraft>(initialBookingDraft)
   const [assignment, setAssignmentState] = useState<Assignment>({ vehicleId: defaultVehicle.id, driverId: defaultDriver.id })
   const [fleetVehicles, setFleetVehicles] = useState<FleetVehicleRecord[]>(seededVehicles)
@@ -251,7 +252,6 @@ export function FleetOpsProvider({ children }: { children: ReactNode }) {
   const [tripSummary, setTripSummary] = useState<TripSummary | null>(null)
   const [invoiceState, setInvoiceState] = useState<InvoiceState>(initialInvoiceState)
 
-<<<<<<< HEAD
   // Load data on user change
   useEffect(() => {
     setIsLoaded(false)
@@ -306,9 +306,6 @@ export function FleetOpsProvider({ children }: { children: ReactNode }) {
       AsyncStorage.setItem(`@energeia_drivers_user_${user.email}`, JSON.stringify(fleetDrivers)).catch(() => {})
     }
   }, [fleetDrivers, user?.email, isLoaded])
-
-=======
->>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
   const currentVehicle = useMemo(() => fleetVehicles.find(vehicle => vehicle.id === assignment.vehicleId) ?? defaultVehicle, [assignment.vehicleId, fleetVehicles])
   const currentDriver = useMemo(() => fleetDrivers.find(driver => driver.id === assignment.driverId) ?? defaultDriver, [assignment.driverId, fleetDrivers])
 
@@ -627,6 +624,42 @@ export function FleetOpsProvider({ children }: { children: ReactNode }) {
     }))
   }
 
+  const [nxlTokens, setNxlTokens] = useState(250) // start with a welcome gift of 250 NXL tokens
+  const [useNxlTokens, setUseNxlTokens] = useState(false)
+
+  // Load NXL tokens on user change
+  useEffect(() => {
+    if (user?.email) {
+      AsyncStorage.getItem(`@energeia_nxl_tokens_${user.email}`).then((val) => {
+        if (val) {
+          setNxlTokens(Number(val))
+        } else {
+          setNxlTokens(250)
+        }
+      })
+    }
+  }, [user?.email])
+
+  // Save NXL tokens when they change
+  useEffect(() => {
+    if (user?.email) {
+      AsyncStorage.setItem(`@energeia_nxl_tokens_${user.email}`, String(nxlTokens)).catch(() => {})
+    }
+  }, [nxlTokens, user?.email])
+
+  function earnNxlTokens(fare: number) {
+    const earned = Math.round(fare * 0.05)
+    setNxlTokens(prev => prev + earned)
+  }
+
+  function redeemNxlTokens(fare: number): number {
+    if (!useNxlTokens) return 0
+    const discount = Math.min(nxlTokens, fare)
+    setNxlTokens(prev => prev - discount)
+    setUseNxlTokens(false)
+    return discount
+  }
+
   function completeTrip(summary: TripSummary) {
     setTripSummary(summary)
     setTripSession(previous => ({
@@ -638,6 +671,8 @@ export function FleetOpsProvider({ children }: { children: ReactNode }) {
       batteryLevel: Math.max(previous.batteryLevel - summary.batteryConsumed, 0),
       distanceCovered: summary.totalDistance,
     }))
+    // Automatically award 5% cashback in NXL tokens on completion
+    earnNxlTokens(summary.fareAmount)
   }
 
   function completeSettlement() {
@@ -658,6 +693,7 @@ export function FleetOpsProvider({ children }: { children: ReactNode }) {
     setTripSession(initialTripSession)
     setTripSummary(null)
     setInvoiceState(initialInvoiceState)
+    setUseNxlTokens(false)
   }
 
   return (
@@ -694,6 +730,12 @@ export function FleetOpsProvider({ children }: { children: ReactNode }) {
         invoiceState,
         completeSettlement,
         resetOperations,
+        nxlTokens,
+        setNxlTokens,
+        useNxlTokens,
+        setUseNxlTokens,
+        earnNxlTokens,
+        redeemNxlTokens,
       }}
     >
       {children}

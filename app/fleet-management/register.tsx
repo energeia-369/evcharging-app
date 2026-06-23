@@ -4,50 +4,42 @@ import React, { useMemo, useState } from 'react'
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { FleetCard, SectionHeader } from '../../components/fleet/Shared'
-import { UploadCard, type SelectedFile } from '../../components/fleet/UploadCard'
 import { fleetDashboardStats } from '../../lib/mock/fleetOnboardingData'
 import { useAuth } from './AuthContext'
 
+import { useLocalSearchParams } from 'expo-router'
+
 export default function FleetRegisterScreen() {
   const router = useRouter()
+  const params = useLocalSearchParams()
+  const role = (params?.role as string) || 'fleet_manager'
+  const isCustomer = role === 'customer'
   const { register } = useAuth()
+  
   const [fleetName, setFleetName] = useState('GreenMotion Logistics')
   const [managerName, setManagerName] = useState('Aman Sharma')
   const [email, setEmail] = useState('fleet@greenmotion.com')
   const [password, setPassword] = useState('Fleet@1234')
   const [phone, setPhone] = useState('9876543210')
   const [city, setCity] = useState('Bengaluru')
-<<<<<<< HEAD
   const [showValidation, setShowValidation] = useState(false)
 
   const completion = useMemo(() => {
-    const fields = [fleetName, managerName, email, password, phone, city]
+    const fields = isCustomer 
+      ? [managerName, email, password, phone]
+      : [fleetName, managerName, email, password, phone, city]
     const filled = fields.filter(Boolean).length
     return Math.round((filled / fields.length) * 100)
-  }, [city, email, fleetName, managerName, phone, password])
+  }, [city, email, fleetName, managerName, phone, password, isCustomer])
 
   async function handleContinue() {
-    if (!fleetName.trim() || !managerName.trim() || !email.trim() || !password || !phone.trim() || !city.trim()) {
+    const isInvalid = isCustomer
+      ? (!managerName.trim() || !email.trim() || !password || !phone.trim())
+      : (!fleetName.trim() || !managerName.trim() || !email.trim() || !password || !phone.trim() || !city.trim())
+
+    if (isInvalid) {
       setShowValidation(true)
       Alert.alert('Missing fields', 'Please fill in all details to continue.')
-=======
-  const [aadhaarFile, setAadhaarFile] = useState<SelectedFile | null>(null)
-  const [panFile, setPanFile] = useState<SelectedFile | null>(null)
-  const [bankPassbookFile, setBankPassbookFile] = useState<SelectedFile | null>(null)
-  const [showValidation, setShowValidation] = useState(false)
-
-  const completion = useMemo(() => {
-    const fields = [fleetName, managerName, email, password, phone, city, aadhaarFile, panFile, bankPassbookFile]
-    const filled = fields.filter(Boolean).length
-    return Math.round((filled / fields.length) * 100)
-  }, [aadhaarFile, bankPassbookFile, city, email, fleetName, managerName, panFile, phone, password])
-
-  async function handleContinue() {
-    const requiredDocumentsReady = Boolean(aadhaarFile && panFile && bankPassbookFile)
-
-    if (!requiredDocumentsReady) {
-      setShowValidation(true)
->>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
       return
     }
 
@@ -55,13 +47,18 @@ export default function FleetRegisterScreen() {
       fullName: managerName,
       email,
       phone,
-      company: fleetName,
+      company: isCustomer ? 'Customer Account' : fleetName,
       password,
+      role: role,
     })
 
     if (result.success) {
       Alert.alert('Registration successful', result.message || 'Your account has been created successfully.')
-      router.push('/fleet-management/shift-selection')
+      if (isCustomer) {
+        router.push('/fleet-management/dashboard')
+      } else {
+        router.push('/fleet-management/shift-selection')
+      }
       return
     }
 
@@ -88,41 +85,55 @@ export default function FleetRegisterScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <MaterialCommunityIcons name="file-document" size={22} color="#0f5132" />
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#0f5132" />
           </Pressable>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>Fleet Manager Registration</Text>
-            <Text style={styles.headerSubtitle}>Start your onboarding journey with verified fleet details.</Text>
+            <Text style={styles.headerTitle}>
+              {isCustomer ? 'Customer Registration' : 'Fleet Manager Registration'}
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              {isCustomer
+                ? 'Create a simple account to book electric cabs and manage NXL wallet rewards.'
+                : 'Start your onboarding journey with verified fleet details.'
+              }
+            </Text>
           </View>
         </View>
 
         <FleetCard style={styles.heroCard}>
           <View style={styles.heroTopRow}>
             <View style={styles.heroIconWrap}>
-              <MaterialCommunityIcons name="account-tie" size={28} color="#ffffff" />
+              <MaterialCommunityIcons name={isCustomer ? 'car-electric' : 'account-tie'} size={28} color="#ffffff" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.heroLabel}>Registration progress</Text>
               <Text style={styles.heroValue}>{completion}% complete</Text>
             </View>
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>{fleetDashboardStats.assignedVehicles} vehicles ready</Text>
-            </View>
+            {!isCustomer && (
+              <View style={styles.heroBadge}>
+                <Text style={styles.heroBadgeText}>{fleetDashboardStats.assignedVehicles} vehicles ready</Text>
+              </View>
+            )}
           </View>
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: `${completion}%` }]} />
           </View>
         </FleetCard>
 
-        <SectionHeader title="Fleet Details" subtitle="Capture the primary operating profile for your fleet." />
+        <SectionHeader 
+          title={isCustomer ? 'Profile Details' : 'Fleet Details'} 
+          subtitle={isCustomer ? 'Enter your contact credentials.' : 'Capture the primary operating profile for your fleet.'} 
+        />
         <FleetCard style={styles.formCard}>
+          {!isCustomer && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Fleet Name</Text>
+              <TextInput style={styles.input} value={fleetName} onChangeText={setFleetName} placeholder="Fleet name" placeholderTextColor="#9ca3af" />
+            </View>
+          )}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Fleet Name</Text>
-            <TextInput style={styles.input} value={fleetName} onChangeText={setFleetName} placeholder="Fleet name" placeholderTextColor="#9ca3af" />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Manager Name</Text>
-            <TextInput style={styles.input} value={managerName} onChangeText={setManagerName} placeholder="Manager name" placeholderTextColor="#9ca3af" />
+            <Text style={styles.inputLabel}>{isCustomer ? 'Full Name' : 'Manager Name'}</Text>
+            <TextInput style={styles.input} value={managerName} onChangeText={setManagerName} placeholder={isCustomer ? 'Full name' : 'Manager name'} placeholderTextColor="#9ca3af" />
           </View>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Email</Text>
@@ -136,52 +147,53 @@ export default function FleetRegisterScreen() {
             <Text style={styles.inputLabel}>Contact Number</Text>
             <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="Phone number" placeholderTextColor="#9ca3af" />
           </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Operating City</Text>
-            <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" placeholderTextColor="#9ca3af" />
-          </View>
+          {!isCustomer && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Operating City</Text>
+              <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" placeholderTextColor="#9ca3af" />
+            </View>
+          )}
         </FleetCard>
-
-<<<<<<< HEAD
-
-=======
-        <SectionHeader title="Identity Documents" subtitle="Upload the manager verification documents before continuing." />
-        <View style={styles.uploadGrid}>
-          <UploadCard label="Aadhaar Card" file={aadhaarFile} onFileSelected={setAadhaarFile} required showValidation={showValidation} warningText="Aadhaar Card is required for registration." description="Verify the manager identity using a government ID." />
-          <UploadCard label="PAN Card" file={panFile} onFileSelected={setPanFile} required showValidation={showValidation} warningText="PAN Card is required for registration." description="Used for fleet tax and business verification." />
-          <UploadCard label="Bank Passbook" file={bankPassbookFile} onFileSelected={setBankPassbookFile} required showValidation={showValidation} warningText="Bank Passbook is required for registration." description="Attach the account proof for payment setup." />
-        </View>
-
-        {showValidation && !(aadhaarFile && panFile && bankPassbookFile) ? (
-          <View style={styles.warningBanner}>
-            <MaterialCommunityIcons name="file-document" size={18} color="#b91c1c" />
-            <Text style={styles.warningBannerText}>Please upload all required identity documents to continue.</Text>
-          </View>
-        ) : null}
->>>>>>> 6fd40c6f5515f9b35690b17707ff8f51705372eb
 
         <SectionHeader title="Why this matters" />
         <View style={styles.summaryGrid}>
           <FleetCard style={styles.summaryCard}>
             <MaterialCommunityIcons name="battery-charging" size={22} color="#10b981" />
-            <Text style={styles.summaryLabel}>Battery Optimized</Text>
-            <Text style={styles.summaryValue}>{fleetDashboardStats.batteryAnalytics}</Text>
+            <Text style={styles.summaryLabel}>{isCustomer ? 'Zero Emissions' : 'Battery Optimized'}</Text>
+            <Text style={styles.summaryValue}>
+              {isCustomer 
+                ? 'Travel on Pune routes 100% emission free inside quiet electric vehicles.' 
+                : fleetDashboardStats.batteryAnalytics
+              }
+            </Text>
           </FleetCard>
           <FleetCard style={styles.summaryCard}>
             <MaterialCommunityIcons name="map-marker" size={22} color="#0ea5e9" />
-            <Text style={styles.summaryLabel}>Route Coverage</Text>
-            <Text style={styles.summaryValue}>{fleetDashboardStats.shiftTimings}</Text>
+            <Text style={styles.summaryLabel}>{isCustomer ? 'Pune Route Connect' : 'Route Coverage'}</Text>
+            <Text style={styles.summaryValue}>
+              {isCustomer 
+                ? 'Fully connected point-to-point connections covering Ramwadi, Swargate, Wanaz, and PCMC.' 
+                : fleetDashboardStats.shiftTimings
+              }
+            </Text>
           </FleetCard>
           <FleetCard style={styles.summaryCard}>
             <MaterialCommunityIcons name="wallet" size={22} color="#f59e0b" />
-            <Text style={styles.summaryLabel}>Monthly Earnings</Text>
-            <Text style={styles.summaryValue}>₹{fleetDashboardStats.earnings.toLocaleString()}</Text>
+            <Text style={styles.summaryLabel}>{isCustomer ? 'NXL Token Cashbacks' : 'Monthly Earnings'}</Text>
+            <Text style={styles.summaryValue}>
+              {isCustomer 
+                ? 'Get 5% reward tokens back on every ride, usable on your next booking.' 
+                : `₹${fleetDashboardStats.earnings.toLocaleString()}`
+              }
+            </Text>
           </FleetCard>
         </View>
 
         <Pressable style={styles.primaryButton} onPress={handleContinue}>
           <MaterialCommunityIcons name="qrcode-scan" size={18} color="#ffffff" />
-          <Text style={styles.primaryButtonText}>Continue to Shift Selection</Text>
+          <Text style={styles.primaryButtonText}>
+            {isCustomer ? 'Complete Registration' : 'Continue to Shift Selection'}
+          </Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -208,9 +220,6 @@ const styles = StyleSheet.create({
   inputGroup: { marginBottom: 12 },
   inputLabel: { fontSize: 12, fontWeight: '700', color: '#0f5132', marginBottom: 6 },
   input: { borderWidth: 1, borderColor: '#dbe7dd', borderRadius: 14, backgroundColor: '#fbfdfb', paddingHorizontal: 14, paddingVertical: 12, color: '#0f172a', fontSize: 14 },
-  uploadGrid: { gap: 12, marginBottom: 16 },
-  warningBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fee2e2', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 16 },
-  warningBannerText: { flex: 1, fontSize: 12, color: '#991b1b', fontWeight: '700', lineHeight: 17 },
   summaryGrid: { gap: 10, marginBottom: 16 },
   summaryCard: { paddingVertical: 14 },
   summaryLabel: { fontSize: 12, fontWeight: '800', color: '#0f5132', marginTop: 8 },

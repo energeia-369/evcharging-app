@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -29,7 +29,7 @@ const modules: Module[] = [
   {
     id: 'ev_charging',
     title: 'EV Charging Station',
-    description: 'Manage charging infrastructure and monitor stations',
+    description: 'Find charging stations, view live socket availability and charge your EV',
     icon: 'power-plug',
     color: '#10b981',
   },
@@ -49,8 +49,8 @@ const modules: Module[] = [
   },
   {
     id: 'fleet_management',
-    title: 'Fleet Management',
-    description: 'Track and optimize vehicle fleet operations',
+    title: 'Fleet Management Dashboard',
+    description: 'Register vehicles, add drivers, verify docs, and manage fleet',
     icon: 'car-multiple',
     color: '#8b5cf6',
   },
@@ -72,6 +72,26 @@ const modules: Module[] = [
 
 export default function ModuleSelectionScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const role = (params?.role as string) || 'customer';
+
+  // Filter modules based on selected role
+  const filteredModules = useMemo(() => {
+    if (role === 'customer') {
+      // Customer gets EV Charging Station and Fleet Service (Trip Booking)
+      return modules.filter(m => m.id === 'ev_charging' || m.id === 'fleet_management');
+    }
+    if (role === 'fleet_manager') {
+      return modules.filter(m => m.id === 'fleet_management' || m.id === 'ev_charging');
+    }
+    if (role === 'service_manager') {
+      return modules.filter(m => m.id === 'ev_service');
+    }
+    if (role === 'franchise_owner') {
+      return modules.filter(m => m.id === 'dealership' || m.id === 'oasis_cafe' || m.id === 'ev_showroom');
+    }
+    return modules;
+  }, [role]);
 
   const [selectedModules, setSelectedModules] = useState<ModuleType[]>([]);
 
@@ -89,37 +109,46 @@ export default function ModuleSelectionScreen() {
       return;
     }
     
-    // If only EV Charging Station is selected, navigate to it
+    // For Customer, if they choose Fleet Service, redirect them to Fleet Management welcome screen to login/register
+    if (role === 'customer') {
+      if (selectedModules.includes('fleet_management') && !selectedModules.includes('ev_charging')) {
+        router.push('/fleet-management?role=customer');
+        return;
+      }
+      if (selectedModules.includes('ev_charging') && !selectedModules.includes('fleet_management')) {
+        router.push('/ev-charging-station');
+        return;
+      }
+      // If both, go to main dashboard tabs
+      router.push('/(tabs)');
+      return;
+    }
+
     if (selectedModules.length === 1 && selectedModules[0] === 'ev_charging') {
       router.push('/ev-charging-station');
       return;
     }
 
-    // If only Oasis Cafe is selected, navigate to the cafe module
     if (selectedModules.length === 1 && selectedModules[0] === 'oasis_cafe') {
       router.push('/oasis-cafe');
       return;
     }
 
-    // If only EV Service Center is selected, navigate to it
     if (selectedModules.length === 1 && selectedModules[0] === 'ev_service') {
       router.push('/ev-service' as any);
       return;
     }
 
-    // If only Fleet Management is selected, navigate to it
     if (selectedModules.length === 1 && selectedModules[0] === 'fleet_management') {
       router.push('/fleet-management');
       return;
     }
 
-    // If only EV Showroom is selected, navigate to it
     if (selectedModules.length === 1 && selectedModules[0] === 'ev_showroom') {
       router.push('/ev-showroom');
       return;
     }
     
-    // Navigate to dashboard with role and modules
     router.push('/(tabs)');
   };
 
@@ -154,8 +183,16 @@ export default function ModuleSelectionScreen() {
 
         {/* Module Cards */}
         <View style={styles.modulesContainer}>
-          {modules.map((module) => {
+          {filteredModules.map((module) => {
             const isSelected = isModuleSelected(module.id);
+            // Custom label for Customer role on Fleet Management
+            const displayTitle = (role === 'customer' && module.id === 'fleet_management') 
+              ? 'Book Point-to-Point Fleet Service' 
+              : module.title;
+            const displayDesc = (role === 'customer' && module.id === 'fleet_management')
+              ? 'Book instant Pune route rides using electric vehicles'
+              : module.description;
+
             return (
               <TouchableOpacity
                 key={module.id}
@@ -205,16 +242,16 @@ export default function ModuleSelectionScreen() {
 
                   {/* Text Content */}
                   <View style={styles.textContent}>
-                    <Text style={styles.moduleTitle}>{module.title}</Text>
+                    <Text style={styles.moduleTitle}>{displayTitle}</Text>
                     <Text style={styles.moduleDescription}>
-                      {module.description}
+                      {displayDesc}
                     </Text>
                   </View>
                 </View>
 
                 {/* Right Arrow */}
                 <MaterialCommunityIcons
-                  name={isSelected ? 'chevron-right' : 'chevron-right'}
+                  name="chevron-right"
                   size={24}
                   color={isSelected ? '#10b981' : '#d1d5db'}
                 />

@@ -21,6 +21,7 @@ export default function FleetManagementLayout() {
         <Stack.Screen name="shift-selection" options={{ title: 'Shift Selection' }} />
         <Stack.Screen name="vehicle-kyc" options={{ title: 'Vehicle KYC' }} />
         <Stack.Screen name="driver-kyc" options={{ title: 'Driver KYC' }} />
+        <Stack.Screen name="manager-kyc" options={{ title: 'Manager KYC' }} />
         <Stack.Screen name="verification" options={{ title: 'Verification' }} />
         <Stack.Screen name="vehicle-details" options={{ title: 'Vehicle Details' }} />
         <Stack.Screen name="driver-management" options={{ title: 'Drivers' }} />

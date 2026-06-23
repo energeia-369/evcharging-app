@@ -1,11 +1,14 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FleetWelcome() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const role = (params?.role as string) || 'fleet_manager';
+  const isCustomer = role === 'customer';
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,10 +21,17 @@ export default function FleetWelcome() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <View style={styles.illustration}>
-            <MaterialCommunityIcons name={'truck-fast' as any} size={52} color="#16A34A" />
+            <MaterialCommunityIcons name={isCustomer ? 'car-electric' : 'truck-fast'} size={52} color="#16A34A" />
           </View>
-          <Text style={styles.title}>Energeia Fleet Management</Text>
-          <Text style={styles.subtitle}>Premium EV fleet tools for managers. Optimize trips, charging, and earnings from one polished control center.</Text>
+          <Text style={styles.title}>
+            {isCustomer ? 'Book Point-to-Point Service' : 'Energeia Fleet Management'}
+          </Text>
+          <Text style={styles.subtitle}>
+            {isCustomer 
+              ? 'Premium EV point-to-point ride booking service in Pune. Ride in comfort and earn NXL cashbacks!'
+              : 'Premium EV fleet tools for managers. Optimize trips, charging, and earnings from one polished control center.'
+            }
+          </Text>
         </View>
 
         {loading ? (
@@ -38,27 +48,45 @@ export default function FleetWelcome() {
           <View style={styles.benefitsRow}>
             <View style={styles.card}>
               <MaterialCommunityIcons name={'car-electric' as any} size={28} color="#0f766e" />
-              <Text style={styles.cardTitle}>EV Ready</Text>
-              <Text style={styles.cardText}>Built for charging-aware routes and real-time EV operations.</Text>
+              <Text style={styles.cardTitle}>{isCustomer ? 'Eco Rides' : 'EV Ready'}</Text>
+              <Text style={styles.cardText}>
+                {isCustomer 
+                  ? 'Ride 100% emission-free electric vehicles on Pune routes.' 
+                  : 'Built for charging-aware routes and real-time EV operations.'
+                }
+              </Text>
             </View>
             <View style={styles.card}>
-              <MaterialCommunityIcons name={'chart-line' as any} size={28} color="#0f766e" />
-              <Text style={styles.cardTitle}>Analytics</Text>
-              <Text style={styles.cardText}>Track utilization, battery levels, and daily revenue trends.</Text>
+              <MaterialCommunityIcons name={'wallet' as any} size={28} color="#0f766e" />
+              <Text style={styles.cardTitle}>{isCustomer ? 'NXL Rewards' : 'Analytics'}</Text>
+              <Text style={styles.cardText}>
+                {isCustomer 
+                  ? 'Earn 5% NXL cashbacks on every completed point-to-point ride.' 
+                  : 'Track utilization, battery levels, and daily revenue trends.'
+                }
+              </Text>
             </View>
           </View>
         )}
 
         <View style={styles.inlineSuccess}>
           <MaterialCommunityIcons name={'check-decagram' as any} size={16} color="#15803D" />
-          <Text style={styles.inlineSuccessText}>Fleet module is synced and ready.</Text>
+          <Text style={styles.inlineSuccessText}>
+            {isCustomer ? 'Ride service is operational.' : 'Fleet module is synced and ready.'}
+          </Text>
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/fleet-management/login')}>
+          <TouchableOpacity 
+            style={styles.primaryButton} 
+            onPress={() => router.push(`/fleet-management/login?role=${role}`)}
+          >
             <Text style={styles.primaryText}>Login</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.ghostButton} onPress={() => router.push('/fleet-management/register')}>
+          <TouchableOpacity 
+            style={styles.ghostButton} 
+            onPress={() => router.push(`/fleet-management/register?role=${role}`)}
+          >
             <Text style={styles.ghostText}>Register</Text>
           </TouchableOpacity>
         </View>

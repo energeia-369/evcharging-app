@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,9 @@ import { useAuth } from './AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const role = (params?.role as string) || 'fleet_manager';
+  const isCustomer = role === 'customer';
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -50,8 +53,13 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Fleet Manager Login</Text>
-        <Text style={styles.hint}>Sign in to manage your fleet, shifts, and drivers.</Text>
+        <Text style={styles.title}>{isCustomer ? 'Customer Login' : 'Fleet Manager Login'}</Text>
+        <Text style={styles.hint}>
+          {isCustomer 
+            ? 'Sign in to book EV cabs and manage your NXL wallet.' 
+            : 'Sign in to manage your fleet, shifts, and drivers.'
+          }
+        </Text>
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Email</Text>
@@ -76,11 +84,11 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <View style={styles.socialRow}>
-          <View style={styles.socialPlaceholder}><MaterialCommunityIcons name={'account-tie' as any} size={20} color="#065f46" /></View>
+          <View style={styles.socialPlaceholder}><MaterialCommunityIcons name={isCustomer ? 'car-electric' : 'account-tie'} size={20} color="#065f46" /></View>
           <View style={styles.socialPlaceholder}><MaterialCommunityIcons name={'qrcode-scan' as any} size={20} color="#065f46" /></View>
         </View>
 
-        <TouchableOpacity onPress={() => router.push('/fleet-management/register') }>
+        <TouchableOpacity onPress={() => router.push(`/fleet-management/register?role=${role}`) }>
           <Text style={styles.link}>Create New Account</Text>
         </TouchableOpacity>
       </ScrollView>

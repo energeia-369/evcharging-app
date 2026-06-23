@@ -96,6 +96,10 @@ export default function TripCompletionScreen() {
             <Text style={styles.fareLabel}>Trip Charges</Text>
             <Text style={styles.fareValue}>₹{Math.round(summary.fareAmount * 0.22).toLocaleString('en-IN')}</Text>
           </View>
+          <View style={styles.fareRow}>
+            <Text style={styles.fareLabel}>NXL Reward Cashback (5%)</Text>
+            <Text style={[styles.fareValue, { color: '#059669', fontWeight: '900' }]}>+{Math.round(summary.fareAmount * 0.05)} NXL</Text>
+          </View>
           <View style={styles.fareRowTotal}>
             <Text style={styles.totalLabel}>Total Trip Fare</Text>
             <Text style={styles.totalValue}>₹{summary.fareAmount.toLocaleString('en-IN')}</Text>
