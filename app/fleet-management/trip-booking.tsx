@@ -179,44 +179,44 @@ export default function TripBookingScreen() {
 
         {/* Payment Selection Modal */}
         <Modal visible={showPaymentModal} transparent animationType="slide">
-          <View style={styles.paymentModalOverlay}>
-            <View style={styles.paymentModalContent}>
-              <View style={styles.paymentModalHeader}>
-                <Text style={styles.paymentModalTitle}>Select Payment Method</Text>
+          <View style={styles.paymentModalOverlay as any}>
+            <View style={styles.paymentModalContent as any}>
+              <View style={styles.paymentModalHeader as any}>
+                <Text style={styles.paymentModalTitle as any}>Select Payment Method</Text>
                 <Pressable onPress={() => setShowPaymentModal(false)}>
                   <MaterialCommunityIcons name="close" size={24} color="#6b7280" />
                 </Pressable>
               </View>
 
-              <View style={styles.fareBreakdown}>
-                <Text style={styles.fareBreakdownTitle}>Fare Summary</Text>
-                <View style={styles.fareRow}>
-                  <Text style={styles.fareLabel}>Base Fare ({tripPreview.distance} km)</Text>
-                  <Text style={styles.fareVal}>₹{tripPreview.baseFare}</Text>
+              <View style={styles.fareBreakdown as any}>
+                <Text style={styles.fareBreakdownTitle as any}>Fare Summary</Text>
+                <View style={styles.fareRow as any}>
+                  <Text style={styles.fareLabel as any}>Base Fare ({tripPreview.distance} km)</Text>
+                  <Text style={styles.fareVal as any}>₹{tripPreview.baseFare}</Text>
                 </View>
                 {useNxlTokens && (
-                  <View style={styles.fareRow}>
-                    <Text style={[styles.fareLabel, { color: '#059669' }]}>NXL Token Discount</Text>
-                    <Text style={[styles.fareVal, { color: '#059669' }]}>-₹{tripPreview.discount}</Text>
+                  <View style={styles.fareRow as any}>
+                    <Text style={[styles.fareLabel as any, { color: '#059669' }]}>NXL Token Discount</Text>
+                    <Text style={[styles.fareVal as any, { color: '#059669' }]}>-₹{tripPreview.discount}</Text>
                   </View>
                 )}
-                <View style={[styles.fareRow, styles.fareTotalRow]}>
-                  <Text style={styles.fareTotalLabel}>Total Amount</Text>
-                  <Text style={styles.fareTotalVal}>₹{tripPreview.estimatedFare}</Text>
+                <View style={[styles.fareRow, styles.fareTotalRow] as any}>
+                  <Text style={styles.fareTotalLabel as any}>Total Amount</Text>
+                  <Text style={styles.fareTotalVal as any}>₹{tripPreview.estimatedFare}</Text>
                 </View>
               </View>
 
-              <Text style={styles.paymentOptionsSectionTitle}>Choose Payment Option</Text>
+              <Text style={styles.paymentOptionsSectionTitle as any}>Choose Payment Option</Text>
               
-              <View style={styles.paymentOptionsList}>
+              <View style={styles.paymentOptionsList as any}>
                 <Pressable 
-                  style={[styles.paymentOptionItem, selectedPaymentMethod === 'upi' && styles.paymentOptionItemActive]}
+                  style={[styles.paymentOptionItem, selectedPaymentMethod === 'upi' && styles.paymentOptionItemActive] as any}
                   onPress={() => setSelectedPaymentMethod('upi')}
                 >
                   <MaterialCommunityIcons name="qrcode" size={24} color={selectedPaymentMethod === 'upi' ? '#10b981' : '#059669'} />
                   <View style={{ flex: 1, marginLeft: 8 }}>
-                    <Text style={styles.paymentOptionLabel}>UPI (GPay / PhonePe / Paytm)</Text>
-                    <Text style={styles.paymentOptionSub}>Pay instantly using any UPI app</Text>
+                    <Text style={styles.paymentOptionLabel as any}>UPI (GPay / PhonePe / Paytm)</Text>
+                    <Text style={styles.paymentOptionSub as any}>Pay instantly using any UPI app</Text>
                   </View>
                   <MaterialCommunityIcons 
                     name={selectedPaymentMethod === 'upi' ? "radiobox-marked" : "radiobox-blank"} 
@@ -226,13 +226,13 @@ export default function TripBookingScreen() {
                 </Pressable>
 
                 <Pressable 
-                  style={[styles.paymentOptionItem, selectedPaymentMethod === 'card' && styles.paymentOptionItemActive]}
+                  style={[styles.paymentOptionItem, selectedPaymentMethod === 'card' && styles.paymentOptionItemActive] as any}
                   onPress={() => setSelectedPaymentMethod('card')}
                 >
                   <MaterialCommunityIcons name="credit-card-outline" size={24} color={selectedPaymentMethod === 'card' ? '#10b981' : '#059669'} />
                   <View style={{ flex: 1, marginLeft: 8 }}>
-                    <Text style={styles.paymentOptionLabel}>Debit / Credit Card</Text>
-                    <Text style={styles.paymentOptionSub}>Visa, MasterCard, RuPay</Text>
+                    <Text style={styles.paymentOptionLabel as any}>Debit / Credit Card</Text>
+                    <Text style={styles.paymentOptionSub as any}>Visa, MasterCard, RuPay</Text>
                   </View>
                   <MaterialCommunityIcons 
                     name={selectedPaymentMethod === 'card' ? "radiobox-marked" : "radiobox-blank"} 
@@ -242,13 +242,13 @@ export default function TripBookingScreen() {
                 </Pressable>
 
                 <Pressable 
-                  style={[styles.paymentOptionItem, selectedPaymentMethod === 'netbanking' && styles.paymentOptionItemActive]}
+                  style={[styles.paymentOptionItem, selectedPaymentMethod === 'netbanking' && styles.paymentOptionItemActive] as any}
                   onPress={() => setSelectedPaymentMethod('netbanking')}
                 >
                   <MaterialCommunityIcons name="bank-outline" size={24} color={selectedPaymentMethod === 'netbanking' ? '#10b981' : '#059669'} />
                   <View style={{ flex: 1, marginLeft: 8 }}>
-                    <Text style={styles.paymentOptionLabel}>Net Banking</Text>
-                    <Text style={styles.paymentOptionSub}>All major Indian banks supported</Text>
+                    <Text style={styles.paymentOptionLabel as any}>Net Banking</Text>
+                    <Text style={styles.paymentOptionSub as any}>All major Indian banks supported</Text>
                   </View>
                   <MaterialCommunityIcons 
                     name={selectedPaymentMethod === 'netbanking' ? "radiobox-marked" : "radiobox-blank"} 
@@ -262,7 +262,7 @@ export default function TripBookingScreen() {
                     styles.paymentOptionItem, 
                     selectedPaymentMethod === 'nxl' && styles.paymentOptionItemActive,
                     nxlTokens < tripPreview.estimatedFare && styles.paymentOptionItemDisabled
-                  ]}
+                  ] as any}
                   onPress={() => {
                     if (nxlTokens >= tripPreview.estimatedFare) {
                       setSelectedPaymentMethod('nxl')
@@ -273,8 +273,8 @@ export default function TripBookingScreen() {
                 >
                   <MaterialCommunityIcons name="wallet-outline" size={24} color={selectedPaymentMethod === 'nxl' ? '#10b981' : '#059669'} />
                   <View style={{ flex: 1, marginLeft: 8 }}>
-                    <Text style={styles.paymentOptionLabel}>Pay with NXL Tokens</Text>
-                    <Text style={styles.paymentOptionSub}>Balance: {nxlTokens} NXL Tokens</Text>
+                    <Text style={styles.paymentOptionLabel as any}>Pay with NXL Tokens</Text>
+                    <Text style={styles.paymentOptionSub as any}>Balance: {nxlTokens} NXL Tokens</Text>
                   </View>
                   <MaterialCommunityIcons 
                     name={selectedPaymentMethod === 'nxl' ? "radiobox-marked" : "radiobox-blank"} 
@@ -284,10 +284,10 @@ export default function TripBookingScreen() {
                 </Pressable>
               </View>
 
-              <View style={styles.paymentFooter}>
-                <Text style={styles.cashbackNotice}>🎁 You will earn 5% NXL Tokens cashback (approx. {Math.round(tripPreview.estimatedFare * 0.05)} NXL) after this ride!</Text>
+              <View style={styles.paymentFooter as any}>
+                <Text style={styles.cashbackNotice as any}>🎁 You will earn 5% NXL Tokens cashback (approx. {Math.round(tripPreview.estimatedFare * 0.05)} NXL) after this ride!</Text>
                 <Pressable style={styles.paymentConfirmBtn} onPress={handleConfirmPayment}>
-                  <Text style={styles.paymentConfirmBtnText}>
+                  <Text style={styles.paymentConfirmBtnText as any}>
                     {selectedPaymentMethod === 'nxl' 
                       ? `Pay ₹${tripPreview.estimatedFare} with NXL Tokens` 
                       : `Confirm & Pay ₹${tripPreview.estimatedFare}`
